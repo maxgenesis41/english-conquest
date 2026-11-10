@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영어정복</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17l-6 3.3 1.3-6.6L2.4 9.1l6.7-.8z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0110 0v3h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1zm2 0h6V7a3 3 0 00-6 0v3z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15.5 3.5L7 12l8.5 8.5 2.5-2.5L12 12l6-6z"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 2s1 4-2 7c-2 2-4 4-4 8a6 6 0 0012 0c0-3-1.5-5-2.5-6 0 2-1 3-2 3 1-3 0-8-1.5-12z"/></symbol>
+</svg>
+<div class="app">
+
+  <!-- 1. 홈 -->
+  <section class="screen" id="home">
+    <div class="logo">
+      <h1 class="pop">영어정복</h1>
+      <p>단어·문장·듣기 모험</p>
+    </div>
+    <div id="stage-list"></div>
+    <div class="btns"><button class="btn yellow" data-go="wordbook">내 단어장 (<span id="wb-count">0</span>)</button></div>
+    <p class="credit">단어 목록 출처: The CEFR-J Wordlist Version 1.5<br>Tono Laboratory, TUFS</p>
+  </section>
+
+  <!-- 2. 모드 선택 -->
+  <section class="screen" id="modes">
+    <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop" id="modes-title">입문</h1></div>
+    <h2 class="sec">게임 방식을 골라 주세요</h2>
+    <div id="modes-note"></div>
+    <button class="chunk mode" data-start="letter" style="--c:var(--green)"><span class="no pop">1</span><span><div class="name">글자 맞추기</div><div class="desc">빈칸에 들어갈 알파벳 고르기</div></span></button>
+    <button class="chunk mode" data-start="meaning" style="--c:var(--blue)"><span class="no pop">2</span><span><div class="name">뜻 맞추기</div><div class="desc">영어 단어의 뜻 고르기</div></span></button>
+    <button class="chunk mode" data-start="spell" style="--c:var(--orange)"><span class="no pop">3</span><span><div class="name">철자 쓰기</div><div class="desc">섞인 글자를 눌러 단어 만들기</div></span></button>
+    <button class="chunk mode" data-start="sentence" style="--c:var(--pink)"><span class="no pop">4</span><span><div class="name">문장 배열</div><div class="desc">섞인 단어를 눌러 문장 만들기</div></span></button>
+    <button class="chunk mode" data-start="listen" style="--c:#8A5CF6"><span class="no pop">5</span><span><div class="name">듣기</div><div class="desc">소리를 듣고 답 고르기</div></span><span class="soonchip" id="listen-chip" style="display:none">소리 없음</span></button>
+  </section>
+
+  <!-- 3. 게임판 (모드 1·2 공용) -->
+  <section class="screen" id="game">
+    <div class="status">
+      <button class="round" id="g-exit" aria-label="나가기"><svg class="ic"><use href="#i-back"/></svg></button>
+      <div class="hp" id="g-hp"></div>
+      <div class="score"><svg class="ic" style="color:#fff;filter:drop-shadow(0 1px 0 #24336B)"><use href="#i-star"/></svg><span id="g-score">0</span></div>
+    </div>
+    <div class="prog"><div class="bar"><div id="g-bar" style="width:0"></div></div><b id="g-count">1 / 10</b></div>
+    <div class="chunk q" id="g-card"></div>
+    <div class="opts" id="g-opts"></div>
+    <div id="g-say"></div>
+    <div class="foot" id="g-foot">
+      <button class="hint" id="g-hint">힌트 3</button>
+      <button class="erase" id="g-erase" style="display:none" disabled>지우기</button>
+      <span class="combo"><svg class="ic"><use href="#i-fire"/></svg>연속 <span id="g-combo">0</span></span>
+    </div>
+    <button class="btn next" id="g-next" style="display:none">다음 문제</button>
+    <div class="shade" id="exit-modal" style="display:none">
+      <div class="chunk modal" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+        <h3 id="exit-title">그만둘까요?</h3>
+        <p>지금 나가면 이번 판 기록은 저장되지 않아요.</p>
+        <div class="btns" style="margin-top:0"><button class="btn" id="exit-no">계속하기</button><button class="btn white" id="exit-yes">나가기</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 결과 -->
+  <section class="screen" id="result">
+    <div class="top"><h1 class="pop" style="margin-right:0">결과</h1></div>
+    <div class="chunk res">
+      <span class="label" id="r-label"></span>
+      <div class="badge pop" id="r-badge"></div>
+      <div class="score2" id="r-score"></div>
+      <div class="stats">
+        <div><small>정답</small><b id="r-correct"></b></div>
+        <div><small>최고 연속</small><b id="r-combo"></b></div>
+        <div><small id="r-new-l">새 단어</small><b id="r-new"></b></div>
+      </div>
+    </div>
+    <div id="r-banner"></div>
+    <div class="btns">
+      <button class="btn" id="r-again">다시 하기</button>
+      <button class="btn blue" data-go="home">홈으로</button>
+    </div>
+  </section>
+
+  <!-- 5. 내 단어장 -->
+  <section class="screen" id="wordbook">
+    <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">내 단어장</h1></div>
+    <div id="wb-full">
+      <span class="wsum" id="wb-sum"></span>
+      <div id="wb-list"></div>
+    </div>
+    <div id="wb-empty" class="chunk empty" style="display:none">
+      <div class="q2">?</div>
+      <b>아직 모은 단어가 없어요</b>
+      <span>게임에서 정답을 맞히면 여기에 쌓여요.</span>
+    </div>
+    <p class="credit">단어 목록 출처: The CEFR-J Wordlist Version 1.5<br>Tono Laboratory, TUFS</p>
+  </section>
+
+</div>
+<script src="data/words.js"></script>
+<script src="data/sentences.js"></script>
+<script src="storage.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
