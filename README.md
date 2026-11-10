@@ -2,7 +2,7 @@
 
 영어 단어·문장·듣기를 게임으로 익히는 웹 학습 게임입니다. PC와 휴대폰 브라우저에서 동작하며, 설치·가입 없이 바로 쓸 수 있습니다.
 
-- 웹 주소: (GitHub Pages 배포 후 기입)
+- 웹 주소: https://maxgenesis41.github.io/english-conquest/
 
 ## 게임 방식
 
@@ -27,7 +27,15 @@
 
 ## 출처와 이용 조건
 
-- 영어 단어 목록: The CEFR-J Wordlist Version 1.5, Tono Laboratory, TUFS (https://www.cefr-j.org/)
+- 영어 단어 목록(일부 선정, 한글 뜻 추가):
+
+  ```
+  The CEFR-J Wordlist Version 1.5. Compiled by Yukio Tono, Tokyo University of Foreign Studies.
+  Retrieved from https://github.com/openlanguageprofiles/olp-en-cefrj
+  (a copy of the list distributed at https://www.cefr-j.org/download.html) on 2026-11-10.
+  ```
+
+- 위 목록의 저작권은 도쿄외국어대학 Tono 연구실에 있으며, 출처를 적절히 밝히면 연구·상업 목적으로 사용할 수 있습니다. 이 프로젝트는 원 목록에서 일부 단어를 선정하고 한글 뜻을 직접 추가했습니다(원 목록을 고쳐 만든 것입니다). 원 목록은 완전하지 않을 수 있고 제작처는 사용으로 생기는 손해에 책임을 지지 않으므로, 이 프로젝트의 단어 데이터에도 오류가 있을 수 있습니다. 최신 개정판(v1.6 등)은 공식 사이트에서 확인하세요
 - 한글 뜻과 모든 문장: 직접 작성
 - 글꼴: Pretendard (SIL Open Font License 1.1, `fonts/LICENSE.txt` 참조)
 - 코드: 순수 HTML·CSS·JavaScript(외부 라이브러리 없음)
