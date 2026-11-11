@@ -8,6 +8,7 @@ var EJ = (function () {
   var KEYS = { progress: "ej_progress", wordbook: "ej_wordbook", settings: "ej_settings" };
   var GRADES = ["C", "B", "A", "S"]; // 낮은 등급 -> 높은 등급
   var STAGE_COUNT = 4;
+  var STYLES = ["retro", "bright", "chime"]; // 효과음 스타일: 레트로 8비트 / 밝은 게임풍 / 부드러운 차임
 
   var memory = {};   // 저장이 막혔을 때만 쓰는 임시 보관(새로고침하면 사라짐)
   var blocked = false;
@@ -23,7 +24,7 @@ var EJ = (function () {
       return { v: FORMAT, stages: stages, modes: {} };
     }
     if (name === "wordbook") return { v: FORMAT, items: [] };
-    return { v: FORMAT, sound: true };
+    return { v: FORMAT, sound: true, mute: false, sfx: true, style: "retro", word: true };
   }
 
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
@@ -47,7 +48,12 @@ var EJ = (function () {
       }
       return true;
     }
-    return typeof o.sound === "boolean";
+    if (typeof o.sound !== "boolean") return false;
+    if (o.mute !== undefined && typeof o.mute !== "boolean") return false;
+    if (o.sfx !== undefined && typeof o.sfx !== "boolean") return false;
+    if (o.word !== undefined && typeof o.word !== "boolean") return false;
+    if (o.style !== undefined && STYLES.indexOf(o.style) < 0) return false;
+    return true;
   }
 
   function rawGet(name) {
@@ -79,6 +85,10 @@ var EJ = (function () {
     try { obj = JSON.parse(raw); } catch (e) { obj = null; }
     if (!valid(name, obj)) { statuses[name] = "corrupt"; return defaults(name); }
     statuses[name] = "ok";
+    if (name === "settings") {   // 옛 저장본에 없는 항목은 기본값으로 채운다(읽기만, 저장하지 않음)
+      var d = defaults(name);
+      for (var k in d) if (obj[k] === undefined) obj[k] = d[k];
+    }
     return obj;
   }
 
@@ -130,6 +140,16 @@ var EJ = (function () {
     return set("settings", s);
   }
 
+  // 소리 설정 1개 변경: key는 mute·sfx·word(true/false), style(STYLES 중 하나). 저장했으면 true
+  function setSetting(key, value) {
+    if (key === "style") { if (STYLES.indexOf(value) < 0) return false; }
+    else if (key === "mute" || key === "sfx" || key === "word") { if (typeof value !== "boolean") return false; }
+    else return false;
+    var st = get("settings");
+    st[key] = value;
+    return set("settings", st);
+  }
+
   // 3종 모두 삭제(개발용 점검 페이지에서만 사용)
   function clearAll() {
     var names = ["progress", "wordbook", "settings"];
@@ -140,8 +160,8 @@ var EJ = (function () {
   }
 
   return {
-    KEYS: KEYS, GRADES: GRADES,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, setSound: setSound,
+    KEYS: KEYS, GRADES: GRADES, STYLES: STYLES,
+    get: get, set: set, recordResult: recordResult, addWord: addWord, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

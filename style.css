@@ -258,3 +258,20 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 
 .flag { width: 42px; height: 28px; flex: none; border: 2px solid var(--ink); border-radius: 6px; box-sizing: content-box; display: block; }
 .set .row .rt { margin-left: 2px; }
+
+/* B-2 소리 카드 */
+button.sw { padding: 0; cursor: pointer; }
+.sw:disabled { opacity: .45; cursor: default; }
+.sw:focus-visible, .so:focus-visible, .pl:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.set .sty { margin: 2px 0 6px; padding: 10px 10px 4px; background: #F1F8FF; border: 2px solid #CFE3F6; border-radius: 14px; }
+.set .stl { font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 4px; }
+.set .so { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 2px solid #E1EDF8; cursor: pointer; }
+.set .stl + .so { border-top: 0; }
+.set .so .rt b { font-size: 15px; }
+.rd { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; flex: none; position: relative; }
+.so.on .rd::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--green); border: 2px solid var(--ink); }
+.pl { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--ink); background: var(--yellow); box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; font-size: 15px; flex: none; padding: 0; }
+.pl:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.pl:disabled { cursor: default; }
+.sty.off { opacity: .45; }
+.sty.off .so { cursor: default; }

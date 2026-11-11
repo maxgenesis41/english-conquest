@@ -104,6 +104,9 @@
     function stop() { try { var s = api(); if (s) s.cancel(); } catch (e) {} }
     return { ok: ok, speak: speak, stop: stop };
   })();
+  // 소리 설정(저장값): 무음·효과음·스타일·단어 소리. 듣기 게임의 문제 소리는 무음이어도 나온다
+  function sfx(name) { var s = EJ.get("settings"); if (s.mute || !s.sfx) return; SFX.play(name, s.style); }
+  function wordSay(text) { var s = EJ.get("settings"); if (s.mute || !s.word || !Sound.ok()) return; Sound.speak(text); }
   var playTimer = null;
   function speakCurrent() {
     if (!cur || cur.mode !== "listen") return;
@@ -222,6 +225,7 @@
     var q = Game.current(cur);
     for (var i = 0; i < spell.seq.length; i++) if (spell.seq[i].t === t) return;
     spell.seq.push({ t: t, lock: false });
+    if (cur.mode === "sentence") wordSay(items(q)[t]);
     renderSpell();
     if (spell.seq.length === items(q).length) spellFinish();
   }
@@ -273,6 +277,7 @@
 
   // 정답/오답 공통 표시: 점수·연속·체력·안내 문구·다음 버튼
   function feedback(r, q, wrongText) {
+    sfx(r.correct ? (cur.combo > 0 && cur.combo % 3 === 0 ? "combo" : "correct") : "wrong");   // 연속 정답 3·6·9회째는 combo 소리
     $("g-hint").disabled = true;
     $("g-score").textContent = String(cur.score);
     $("g-combo").textContent = String(cur.combo);
@@ -387,6 +392,7 @@
     if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
     if (newlyUnlocked) ban.appendChild(el("div", "banner up", STAGES[lastStage].name + "이 열렸어요!"));
     cur = null;
+    sfx(r.over ? "over" : "clear");
     show("result");
   }
 
@@ -401,7 +407,45 @@
     if (name === "home") renderHome();
     if (name === "wordbook") renderWordbook();
     if (name === "modes") renderModes();
+    if (name === "settings") renderSettings();
     window.scrollTo(0, 0);
+  }
+
+  // 설정 화면: 저장된 값을 읽어 스위치·스타일을 표시한다(읽기만 하고 저장하지 않음)
+  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word" };
+  function renderSettings() {
+    var s = EJ.get("settings");
+    function sw(id, on, dis) {
+      var b = $(id); b.className = "sw " + (on ? "on" : "off");
+      b.setAttribute("aria-checked", on ? "true" : "false"); b.disabled = !!dis;
+    }
+    sw("sw-mute", s.mute, false); sw("sw-sfx", s.sfx, s.mute); sw("sw-word", s.word, s.mute);
+    var off = s.mute || !s.sfx;
+    $("sty-box").classList.toggle("off", off);
+    var rows = document.querySelectorAll("#sty-box .so");
+    for (var i = 0; i < rows.length; i++) {
+      var on = rows[i].dataset.style === s.style;
+      rows[i].classList.toggle("on", on);
+      rows[i].setAttribute("aria-checked", on ? "true" : "false");
+      rows[i].setAttribute("aria-disabled", off ? "true" : "false");
+      rows[i].querySelector(".pl").disabled = off;
+    }
+  }
+  function toggleSetting(id) {
+    var key = SW_KEYS[id];
+    EJ.setSetting(key, !EJ.get("settings")[key]);
+    renderSettings();
+    sfx("click");
+  }
+  function chooseStyle(st) {
+    EJ.setSetting("style", st);
+    renderSettings();
+    sfx("click");
+  }
+  function previewStyle(st) {
+    var s = EJ.get("settings"); if (s.mute || !s.sfx) return;
+    SFX.play("correct", st);
+    setTimeout(function () { SFX.play("clear", st); }, 650);
   }
 
   function renderModes() {
@@ -424,6 +468,15 @@
 
   document.addEventListener("click", function (e) {
     var t = e.target;
+    var swb = t.closest(".sw");
+    if (swb && SW_KEYS[swb.id]) { if (!swb.disabled) toggleSetting(swb.id); return; }
+    var pv = t.closest(".pl");
+    if (pv) { if (!pv.disabled) previewStyle(pv.dataset.style); return; }
+    var so = t.closest("#sty-box .so");
+    if (so) { if (so.getAttribute("aria-disabled") !== "true") chooseStyle(so.dataset.style); return; }
+    var cb = t.closest("button");   // 버튼 클릭 효과음(정답 고르기·듣기·결과 보기는 다른 소리가 나므로 제외)
+    if (cb && !cb.disabled && !(cb.parentNode && cb.parentNode.id === "g-opts" && !spell) && cb.id !== "g-spk" &&
+        !(cb.id === "g-next" && cb.textContent === "결과 보기")) sfx("click");
     var go = t.closest("[data-go]");
     if (go && !go.disabled) {
       if (go.dataset.stage) {
@@ -475,6 +528,13 @@
       });
     }
   } catch (e) {}
+
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("so")) {
+      e.preventDefault();
+      if (e.target.getAttribute("aria-disabled") !== "true") chooseStyle(e.target.dataset.style);
+    }
+  });
 
   var h = (location.hash || "#home").slice(1);
   show(h === "modes" || h === "wordbook" || h === "settings" ? h : "home");

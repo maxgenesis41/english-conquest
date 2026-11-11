@@ -30,7 +30,7 @@
     </div>
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="wordbook">내 단어장 (<span id="wb-count">0</span>)</button></div>
-    <p class="ver">v0.25</p>
+    <p class="ver">v0.26</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -110,10 +110,16 @@
     <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">설정</h1></div>
 
     <h2 class="sh">소리</h2>
-    <div class="chunk set">
-      <div class="row"><div class="rt"><b>무음</b><span>모든 소리를 한 번에 끄기</span></div><span class="soonchip">준비 중</span><span class="sw off dis"></span></div>
-      <div class="row"><div class="rt"><b>효과음</b><span>버튼·정답·미션 클리어</span></div><span class="soonchip">준비 중</span><span class="sw on dis"></span></div>
-      <div class="row"><div class="rt"><b>단어 소리</b><span>문장 배열 단어 읽기</span></div><span class="soonchip">준비 중</span><span class="sw on dis"></span></div>
+    <div class="chunk set" id="sound-card">
+      <div class="row"><div class="rt"><b>무음</b><span>모든 소리 끄기 (듣기 문제 소리 제외)</span></div><button type="button" class="sw off" id="sw-mute" role="switch" aria-checked="false" aria-label="무음"></button></div>
+      <div class="row"><div class="rt"><b>효과음</b><span>버튼·정답·오답·미션 클리어</span></div><button type="button" class="sw on" id="sw-sfx" role="switch" aria-checked="true" aria-label="효과음"></button></div>
+      <div class="sty" id="sty-box" role="radiogroup" aria-label="효과음 스타일">
+        <div class="stl">효과음 스타일</div>
+        <div class="so on" data-style="retro" role="radio" aria-checked="true" tabindex="0"><span class="rd"></span><div class="rt"><b>레트로 8비트</b><span>옛날 오락실 느낌 · 기본</span></div><button class="pl" data-style="retro" aria-label="듣기"><svg viewBox="0 0 24 24" class="ic"><path d="M8 5v14l11-7z"/></svg></button></div>
+        <div class="so" data-style="bright" role="radio" aria-checked="false" tabindex="0"><span class="rd"></span><div class="rt"><b>밝은 게임풍</b><span>또렷하고 경쾌한 소리</span></div><button class="pl" data-style="bright" aria-label="듣기"><svg viewBox="0 0 24 24" class="ic"><path d="M8 5v14l11-7z"/></svg></button></div>
+        <div class="so" data-style="chime" role="radio" aria-checked="false" tabindex="0"><span class="rd"></span><div class="rt"><b>부드러운 차임</b><span>맑은 종소리, 귀가 편함</span></div><button class="pl" data-style="chime" aria-label="듣기"><svg viewBox="0 0 24 24" class="ic"><path d="M8 5v14l11-7z"/></svg></button></div>
+      </div>
+      <div class="row"><div class="rt"><b>단어 소리</b><span>문장 배열 단어 읽기</span></div><button type="button" class="sw on" id="sw-word" role="switch" aria-checked="true" aria-label="단어 소리"></button></div>
     </div>
 
     <h2 class="sh">게임</h2>
@@ -139,6 +145,7 @@
 <script src="data/sentences.js"></script>
 <script src="storage.js"></script>
 <script src="game.js"></script>
+<script src="sfx.js"></script>
 <script src="app.js"></script>
 <script>if ("serviceWorker" in navigator && location.protocol !== "file:") { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
 </body>
