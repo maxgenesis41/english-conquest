@@ -125,7 +125,7 @@ var EJ = (function () {
     return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
   }
 
-  // 한 판 결과 기록: 단계 최고 등급·모드 최고 점수를 갱신하고, 등급 B 이상이면 다음 단계를 연다
+  // 한 판 결과 기록: 단계 최고 등급·모드 최고 점수를 갱신하고, 등급 B 이상이며 그 단계 틀린 단어가 0개면 다음 단계를 연다
   function recordResult(stage, modeId, grade, score) {
     if (GRADES.indexOf(grade) < 0 || stage < 1 || stage > STAGE_COUNT) return false;
     var p = get("progress");
@@ -134,7 +134,23 @@ var EJ = (function () {
     var key = stage + ":" + modeId;
     if (typeof score === "number" && (typeof p.modes[key] !== "number" || score > p.modes[key])) p.modes[key] = score;
     var next = p.stages[String(stage + 1)];
-    if (next && gradeAtLeast(st.best, "B")) next.unlocked = true;
+    if (next && gradeAtLeast(st.best, "B") && reviewLeft(stage) === 0) next.unlocked = true;   // v0.31: 그 단계의 틀린 단어 복습도 끝나야 연다
+    return set("progress", p);
+  }
+
+  // 그 단계(level)에 남은 틀린 단어 수
+  function reviewLeft(stage) {
+    var items = get("review").items, n = 0;
+    for (var i = 0; i < items.length; i++) if (items[i].level === stage) n++;
+    return n;
+  }
+
+  // 복습을 마친 뒤 다음 단계 열기: 그 단계 최고 등급 B 이상 + 틀린 단어 0개일 때만 연다. 새로 열었으면 true(이미 열려 있으면 저장하지 않고 false)
+  function tryUnlock(stage) {
+    var p = get("progress");
+    var st = p.stages[String(stage)], next = p.stages[String(stage + 1)];
+    if (!st || !next || next.unlocked || !gradeAtLeast(st.best, "B") || reviewLeft(stage) > 0) return false;
+    next.unlocked = true;
     return set("progress", p);
   }
 
@@ -202,7 +218,7 @@ var EJ = (function () {
 
   return {
     KEYS: KEYS, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, setSound: setSound, setSetting: setSetting,
+    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

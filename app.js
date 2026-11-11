@@ -10,6 +10,13 @@
     { n: 4, name: "중급 (인터미디어)", cefr: "B2", color: "var(--pink)" }
   ];
 
+  // 잠긴 단계 카드 안내(①): 앞 단계가 B 이상이면 남은 복습 수, 아니면 필요한 조건
+  function needText(i) {
+    var pv = STAGES[i - 1], left = EJ.reviewLeft(pv.n);
+    if (EJ.gradeAtLeast(EJ.get("progress").stages[String(pv.n)].best, "B") && left > 0) return "틀린 단어 복습 " + left + "개 남음";   // B는 달성, 복습만 남은 경우(사실과 맞게)
+    return pv.name + " B등급 필요";
+  }
+
   // 홈: 단계 카드(열림/잠김, 최고 등급)와 틀린 단어 개수
   function renderHome() {
     var p = EJ.get("progress");
@@ -25,13 +32,17 @@
       } else {
         html += '<button class="chunk stage locked" disabled>' +
           '<span class="tile pop">' + s.cefr + '</span>' +
-          '<span class="txt"><div class="name">' + s.name + '</div><div class="meta">' + STAGES[i - 1].name + ' B등급 이상 필요</div></span>' +
+          '<span class="txt"><div class="name">' + s.name + '</div><div class="meta">' + needText(i) + '</div></span>' +
           '<svg class="ic lock"><use href="#i-lock"/></svg></button>';
       }
     }
     document.getElementById("stage-list").innerHTML = html;
-    document.getElementById("rv-count").textContent = String(EJ.get("review").items.length);
+    var rvN = EJ.get("review").items.length;
+    document.getElementById("rv-count").textContent = String(rvN);
+    document.getElementById("rv-guide").style.display = rvN > 0 ? "" : "none";
   }
+
+  function shortName(n) { return STAGES[n - 1].name.split(" ")[0]; }   // "중급 (인터미디어)" → "중급" (문장 안에서 조사가 어색하지 않게)
 
   function wordById(id) {
     for (var i = 0; i < WORDS.length; i++) if (WORDS[i].id === id) return WORDS[i];
@@ -46,6 +57,7 @@
     document.getElementById("rv-full").style.display = items.length ? "block" : "none";
     document.getElementById("rv-empty").style.display = items.length ? "none" : "block";
     document.getElementById("rv-sum").textContent = "틀린 단어 " + items.length + "개";
+    var prog = EJ.get("progress"), lockedNext = false;
     for (var n = 1; n <= STAGES.length; n++) {
       var its = [], i;
       for (i = 0; i < items.length; i++) if (items[i].level === n) its.push(items[i]);
@@ -391,8 +403,10 @@
     Sound.stop();
     var r = Game.result(cur), stage = lastStage, i;
     EJ.removeWrongs(r.correctIds);
-    var left = 0, its = EJ.get("review").items;
-    for (i = 0; i < its.length; i++) if (its[i].level === stage) left++;
+    var left = EJ.reviewLeft(stage);
+    var opened = EJ.tryUnlock(stage);   // 그 단계 복습을 모두 마쳤고 B 이상이면 다음 단계를 연다
+    var nxt = EJ.get("progress").stages[String(stage + 1)], nextLocked = !!(nxt && !nxt.unlocked);
+    var bestOk = EJ.gradeAtLeast(EJ.get("progress").stages[String(stage)].best, "B");
     cur = null;
     $("r-label").textContent = STAGES[stage - 1].name + " · 틀린 단어 복습";
     var badge = $("r-badge"); badge.textContent = "✓"; badge.className = "badge pop";
@@ -401,9 +415,11 @@
     $("r-l2").textContent = "다시 틀림"; $("r-combo").textContent = String(r.answered - r.correct);
     $("r-new-l").textContent = "남은 단어"; $("r-new").textContent = String(left);
     var ban = $("r-banner"); ban.textContent = "";
-    if (!left) ban.appendChild(el("div", "banner up", STAGES[stage - 1].name + " 복습을 모두 마쳤어요!"));
+    if (opened) ban.appendChild(el("div", "banner up", shortName(stage + 1) + "이 열렸어요!"));
+    else if (!left) ban.appendChild(el("div", "banner up", STAGES[stage - 1].name + " 복습을 모두 마쳤어요!"));
     else if (r.correct) ban.appendChild(el("div", "banner up", "맞힌 " + r.correct + "개는 목록에서 빠졌어요!"));
     var nb = $("r-next"), ag = $("r-again");
+    nb.dataset.act = "";
     ag.style.display = "none";
     if (left) { nb.style.display = ""; nb.className = "btn ib"; nb.querySelector(".t").textContent = "다시 복습"; $("r-next-s").textContent = "남은 " + left + "개"; }
     else nb.style.display = "none";
@@ -423,13 +439,13 @@
     var wasUnlocked = !!(before && before.unlocked);
     var wb = EJ.get("wordbook").items, have = {}, newCount = 0, i;
     for (i = 0; i < wb.length; i++) have[wb[i].id] = true;
-    EJ.recordResult(lastStage, lastMode, r.grade, r.score);
     if (lastMode !== "sentence" && r.wrongIds.length) {   // 틀린 단어 기록(문장 제외, 한 판에 한 번 저장)
       var lv = {}, wl = [];
       for (i = 0; i < WORDS.length; i++) lv[WORDS[i].id] = WORDS[i].level;
       for (i = 0; i < r.wrongIds.length; i++) if (lv[r.wrongIds[i]]) wl.push({ id: r.wrongIds[i], level: lv[r.wrongIds[i]] });
       EJ.addWrongs(wl);
     }
+    EJ.recordResult(lastStage, lastMode, r.grade, r.score);   // 틀린 단어를 먼저 기록해야 단계 열림 조건(복습 0개)이 맞다
     if (lastMode !== "sentence") {   // 문장은 단어장에 넣지 않는다
       for (i = 0; i < r.correctIds.length; i++) {
         if (!have[r.correctIds[i]]) { have[r.correctIds[i]] = true; newCount++; }
@@ -440,6 +456,9 @@
     var newlyUnlocked = !!(after && after.unlocked && !wasUnlocked);
     var lab = STAGES[lastStage - 1].name + " · " + MODE_NAMES[lastMode];
     var unlockMsg = newlyUnlocked ? STAGES[lastStage].name + "이 열렸어요!" : "";
+    // ③ B 이상을 받았어도 복습이 남아 다음 단계가 잠겨 있는 경우
+    var pendLeft = EJ.reviewLeft(lastStage), pendNext = STAGES[lastStage];
+    var pending = !!(pendNext && after && !after.unlocked && EJ.gradeAtLeast(EJ.get("progress").stages[String(lastStage)].best, "B") && pendLeft > 0);
     var set = EJ.get("settings");
     cur = null;
     if (set.result || r.over) {
@@ -471,6 +490,12 @@
       var failFirst = r.over && !twoBtn;   // 체력 0: 같은 게임 다시를 1순위(초록)로
       nb.className = "btn ib" + (failFirst ? " blue" : "");
       ag.className = "btn ib" + (failFirst ? "" : " blue");
+      nb.dataset.act = "";
+      if (pending) {   // 첫 버튼을 "복습하기"로(다시·모드 버튼은 그대로)
+        nb.className = "btn ib"; ag.className = "btn ib blue"; ag.style.display = "";
+        nb.querySelector(".t").textContent = "복습하기"; $("r-next-s").textContent = STAGES[lastStage - 1].name + " " + pendLeft + "개";
+        nb.dataset.act = "review";
+      }
       sfx(r.over ? "over" : "clear");
       $("res-modal").style.display = "grid"; nb.focus();
     } else {
@@ -616,7 +641,7 @@
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
     if (t.closest("#exit-yes")) { closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
-    if (t.closest("#r-next")) { closeRes(); if (lastReview) { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
+    if (t.closest("#r-next")) { closeRes(); if (lastReview || $("r-next").dataset.act === "review") { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
     if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
     if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = STAGES[lastStage - 1].name; show("modes"); return; }
   });

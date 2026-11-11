@@ -306,3 +306,11 @@ button.sw { padding: 0; cursor: pointer; }
 .rgrp b { font-size: 20px; color: var(--ink); }
 .rgrp .btn { width: auto; height: 44px; font-size: 16px; padding: 0 18px; margin: 0; border-radius: 14px; box-shadow: 0 4px 0 var(--ink), inset 0 -4px 0 rgba(0,0,0,.16), inset 0 3px 0 rgba(255,255,255,.4); }
 .rgrp .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), inset 0 -4px 0 rgba(0,0,0,.16); }
+.rnote { margin: 0 0 14px; background: #FFF4CC; border: 3px solid var(--ink); border-radius: 16px; padding: 9px 12px; font-weight: 700; font-size: 14px; line-height: 1.35; color: var(--ink); }
+.rgrp.hs { margin-bottom: 4px; }
+.rsub { font-size: 13px; font-weight: 700; color: #E0542B; margin: 0 0 12px; }
+.meta .pend { color: #E0542B; }
+.banner.note { background: #FFF4CC; flex-direction: column; gap: 2px; text-align: center; font-size: 14px; }
+.banner.note .o { color: #E0542B; font-size: 13px; }
+
+.rv-guide{margin:8px 4px 0;font-size:13px;line-height:1.4;color:#6B6475;text-align:center}
