@@ -367,6 +367,12 @@
     var wb = EJ.get("wordbook").items, have = {}, newCount = 0, i;
     for (i = 0; i < wb.length; i++) have[wb[i].id] = true;
     EJ.recordResult(lastStage, lastMode, r.grade, r.score);
+    if (lastMode !== "sentence" && r.wrongIds.length) {   // 틀린 단어 기록(문장 제외, 한 판에 한 번 저장)
+      var lv = {}, wl = [];
+      for (i = 0; i < WORDS.length; i++) lv[WORDS[i].id] = WORDS[i].level;
+      for (i = 0; i < r.wrongIds.length; i++) if (lv[r.wrongIds[i]]) wl.push({ id: r.wrongIds[i], level: lv[r.wrongIds[i]] });
+      EJ.addWrongs(wl);
+    }
     if (lastMode !== "sentence") {   // 문장은 단어장에 넣지 않는다
       for (i = 0; i < r.correctIds.length; i++) {
         if (!have[r.correctIds[i]]) { have[r.correctIds[i]] = true; newCount++; }

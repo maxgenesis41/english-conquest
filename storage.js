@@ -1,11 +1,11 @@
 // 영어정복 2단계: 브라우저 로컬 저장 (설계.md 4-2)
-// 저장 3종: ej_progress(단계·최고 점수), ej_wordbook(맞힌 단어), ej_settings(설정)
+// 저장 4종: ej_progress(단계·최고 점수), ej_wordbook(맞힌 단어, v0.29부터 사용 중단), ej_review(틀린 단어, v0.29), ej_settings(설정)
 // 원칙: 값이 바뀔 때만 저장한다(열기만 해서 저장하지 않음). 저장이 막혀도 화면은 깨지지 않는다.
 var EJ = (function () {
   "use strict";
 
   var FORMAT = 1; // 저장 형식 번호(v). 나중에 형식이 바뀌면 이 값을 올리고 옛 기록을 변환한다
-  var KEYS = { progress: "ej_progress", wordbook: "ej_wordbook", settings: "ej_settings" };
+  var KEYS = { progress: "ej_progress", wordbook: "ej_wordbook", review: "ej_review", settings: "ej_settings" };
   var GRADES = ["C", "B", "A", "S"]; // 낮은 등급 -> 높은 등급
   var STAGE_COUNT = 4;
   var STYLES = ["retro", "bright", "chime"]; // 효과음 스타일: 레트로 8비트 / 밝은 게임풍 / 부드러운 차임
@@ -24,7 +24,7 @@ var EJ = (function () {
       }
       return { v: FORMAT, stages: stages, modes: {} };
     }
-    if (name === "wordbook") return { v: FORMAT, items: [] };
+    if (name === "wordbook" || name === "review") return { v: FORMAT, items: [] };
     return { v: FORMAT, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, next: "order" };
   }
 
@@ -38,6 +38,15 @@ var EJ = (function () {
         var s = o.stages[String(i)];
         if (!isObj(s) || typeof s.unlocked !== "boolean") return false;
         if (s.best !== "" && GRADES.indexOf(s.best) < 0) return false;
+      }
+      return true;
+    }
+    if (name === "review") {   // 틀린 단어: id(문자열)·level(1~단계 수)·date(문자열)
+      if (!Array.isArray(o.items)) return false;
+      for (var r = 0; r < o.items.length; r++) {
+        var rv = o.items[r];
+        if (!isObj(rv) || typeof rv.id !== "string" || typeof rv.date !== "string") return false;
+        if (typeof rv.level !== "number" || rv.level < 1 || rv.level > STAGE_COUNT || rv.level % 1 !== 0) return false;
       }
       return true;
     }
@@ -137,6 +146,23 @@ var EJ = (function () {
     return set("wordbook", wb);
   }
 
+  // 틀린 단어 추가(한 판이 끝날 때 한 번에): list는 [{id, level}]. 이미 있는 단어·잘못된 항목은 건너뛰고, 새로 추가한 것이 있을 때만 저장한다
+  // 반환: 새로 추가한 개수(저장 못 했으면 0)
+  function addWrongs(list, date) {
+    var rv = get("review"), have = {}, added = 0, i;
+    for (i = 0; i < rv.items.length; i++) have[rv.items[i].id] = true;
+    for (i = 0; i < list.length; i++) {
+      var it = list[i];
+      if (!it || typeof it.id !== "string" || have[it.id]) continue;
+      if (typeof it.level !== "number" || it.level < 1 || it.level > STAGE_COUNT || it.level % 1 !== 0) continue;
+      have[it.id] = true;
+      rv.items.push({ id: it.id, level: it.level, date: date || today() });
+      added++;
+    }
+    if (!added) return 0;
+    return set("review", rv) ? added : 0;
+  }
+
   function setSound(on) {
     var s = get("settings");
     s.sound = !!on;
@@ -154,9 +180,9 @@ var EJ = (function () {
     return set("settings", st);
   }
 
-  // 3종 모두 삭제(개발용 점검 페이지에서만 사용)
+  // 4종 모두 삭제(개발용 점검 페이지에서만 사용)
   function clearAll() {
-    var names = ["progress", "wordbook", "settings"];
+    var names = ["progress", "wordbook", "review", "settings"];
     for (var i = 0; i < names.length; i++) {
       delete memory[names[i]];
       if (!blocked) { try { localStorage.removeItem(KEYS[names[i]]); } catch (e) { blocked = true; } }
@@ -165,7 +191,7 @@ var EJ = (function () {
 
   return {
     KEYS: KEYS, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, setSound: setSound, setSetting: setSetting,
+    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

@@ -87,7 +87,7 @@ var Game = (function () {
       stage: o.stage, mode: o.mode, questions: qs, index: 0,
       hp: MAX_HP, score: 0, combo: 0, bestCombo: 0, correct: 0, answered: 0,
       hintsLeft: HINTS, hintUsed: false, removed: [], picked: null,
-      ending: false, over: false, finished: false, correctIds: []
+      ending: false, over: false, finished: false, correctIds: [], wrongIds: []
     };
   }
 
@@ -117,6 +117,7 @@ var Game = (function () {
       if (g.combo % 3 === 0 && g.hp < MAX_HP) { g.hp++; fb.healed = true; }
     } else {
       g.combo = 0;
+      g.wrongIds.push(q.id);
       g.hp--;
       if (g.hp <= 0) { g.hp = 0; g.over = true; fb.over = true; }
     }
@@ -172,7 +173,7 @@ var Game = (function () {
   }
 
   function result(g) {
-    return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: HINTS - g.hintsLeft, correctIds: g.correctIds.slice() };
+    return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: HINTS - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice() };
   }
 
   return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
