@@ -29,8 +29,8 @@
       <p>단어·문장·듣기 모험</p>
     </div>
     <div id="stage-list"></div>
-    <div class="btns"><button class="btn yellow" data-go="wordbook">내 단어장 (<span id="wb-count">0</span>)</button></div>
-    <p class="ver">v0.29</p>
+    <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button></div>
+    <p class="ver">v0.30</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -50,6 +50,7 @@
     <div class="status">
       <button class="round" id="g-exit" aria-label="나가기"><svg class="ic"><use href="#i-back"/></svg></button>
       <div class="hp" id="g-hp"></div>
+      <div class="rtag" id="g-rtag"></div>
       <div class="score"><svg class="ic" style="color:#fff;filter:drop-shadow(0 1px 0 #24336B)"><use href="#i-star"/></svg><span id="g-score">0</span></div>
     </div>
     <div class="prog"><div class="bar"><div id="g-bar" style="width:0"></div></div><b id="g-count">1 / 10</b></div>
@@ -80,31 +81,31 @@
         <div class="rtx"><div class="score2" id="r-score"></div></div>
       </div>
       <div class="stats">
-        <div><small>정답</small><b id="r-correct2"></b></div>
-        <div><small>최고 연속</small><b id="r-combo"></b></div>
+        <div><small id="r-l1">정답</small><b id="r-correct2"></b></div>
+        <div><small id="r-l2">최고 연속</small><b id="r-combo"></b></div>
         <div><small id="r-new-l">새 단어</small><b id="r-new"></b></div>
       </div>
       <div id="r-banner"></div>
       <div class="btns3">
         <button class="btn ib" id="r-next"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span class="t">계속하기</span><span class="s" id="r-next-s"></span></button>
         <button class="btn ib blue" id="r-again"><svg class="ic" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg><span class="t">다시</span><span class="s">같은 게임</span></button>
-        <button class="btn ib white" id="r-modes"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h2v2H4zm4 0h12v2H8zM4 11h2v2H4zm4 0h12v2H8zM4 16h2v2H4zm4 0h12v2H8z"/></svg><span class="t">모드</span><span class="s">선택</span></button>
+        <button class="btn ib white" id="r-modes"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h2v2H4zm4 0h12v2H8zM4 11h2v2H4zm4 0h12v2H8zM4 16h2v2H4zm4 0h12v2H8z"/></svg><span class="t" id="r-modes-t">모드</span><span class="s" id="r-modes-s">선택</span></button>
       </div>
     </div>
   </div>
   <div class="toast" id="toast" style="display:none" role="status"></div>
 
-  <!-- 5. 내 단어장 -->
-  <section class="screen" id="wordbook">
-    <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">내 단어장</h1></div>
-    <div id="wb-full">
-      <span class="wsum" id="wb-sum"></span>
-      <div id="wb-list"></div>
+  <!-- 5. 틀린 단어 복습 (틀린 단어를 단계별로 모아 두고, 복습 게임으로 푼다) -->
+  <section class="screen" id="review">
+    <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">틀린 단어 복습</h1></div>
+    <div id="rv-full">
+      <span class="wsum" id="rv-sum"></span>
+      <div id="rv-list"></div>
     </div>
-    <div id="wb-empty" class="chunk empty" style="display:none">
+    <div id="rv-empty" class="chunk empty" style="display:none">
       <div class="q2">?</div>
-      <b>아직 모은 단어가 없어요</b>
-      <span>게임에서 정답을 맞히면 여기에 쌓여요.</span>
+      <b>틀린 단어가 없어요</b>
+      <span>게임에서 틀린 단어가 생기면 여기에 쌓여요.</span>
     </div>
   </section>
 

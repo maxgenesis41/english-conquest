@@ -163,6 +163,17 @@ var EJ = (function () {
     return set("review", rv) ? added : 0;
   }
 
+  // 틀린 단어 제거(복습에서 맞힌 단어, 한 판이 끝날 때 한 번에): ids는 단어 id 목록. 제거한 개수를 돌려주고, 제거할 것이 없으면 저장하지 않는다
+  function removeWrongs(ids) {
+    var rv = get("review"), drop = {}, kept = [], i;
+    for (i = 0; i < ids.length; i++) drop[ids[i]] = true;
+    for (i = 0; i < rv.items.length; i++) if (!drop[rv.items[i].id]) kept.push(rv.items[i]);
+    var removed = rv.items.length - kept.length;
+    if (!removed) return 0;
+    rv.items = kept;
+    return set("review", rv) ? removed : 0;
+  }
+
   function setSound(on) {
     var s = get("settings");
     s.sound = !!on;
@@ -191,7 +202,7 @@ var EJ = (function () {
 
   return {
     KEYS: KEYS, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, setSound: setSound, setSetting: setSetting,
+    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

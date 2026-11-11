@@ -297,3 +297,12 @@ button.sw { padding: 0; cursor: pointer; }
 .modal.res .btn.ib .ic { width: 28px; height: 28px; fill: currentColor; stroke: none; filter: drop-shadow(0 2px 0 rgba(36,51,107,.45)); }
 .modal.res .btn.ib.white .ic { filter: none; }
 .modal.res .btn.ib .s { font-size: 11px; font-weight: 600; opacity: .9; text-shadow: none; }
+
+/* 틀린 단어 복습 (v0.30) */
+.rtag { display: none; flex: 1; text-align: center; background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: 16px; box-shadow: 0 3px 0 var(--ink); }
+#game.review .rtag { display: block; }
+#game.review .hp, #game.review .score, #game.review #g-foot { display: none; }
+.rgrp { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 12px; }
+.rgrp b { font-size: 20px; color: var(--ink); }
+.rgrp .btn { width: auto; height: 44px; font-size: 16px; padding: 0 18px; margin: 0; border-radius: 14px; box-shadow: 0 4px 0 var(--ink), inset 0 -4px 0 rgba(0,0,0,.16), inset 0 3px 0 rgba(255,255,255,.4); }
+.rgrp .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), inset 0 -4px 0 rgba(0,0,0,.16); }

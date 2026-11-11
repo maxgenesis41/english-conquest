@@ -10,7 +10,7 @@
     { n: 4, name: "중급 (인터미디어)", cefr: "B2", color: "var(--pink)" }
   ];
 
-  // 홈: 단계 카드(열림/잠김, 최고 등급)와 단어장 개수
+  // 홈: 단계 카드(열림/잠김, 최고 등급)와 틀린 단어 개수
   function renderHome() {
     var p = EJ.get("progress");
     var html = "";
@@ -30,7 +30,7 @@
       }
     }
     document.getElementById("stage-list").innerHTML = html;
-    document.getElementById("wb-count").textContent = String(EJ.get("wordbook").items.length);
+    document.getElementById("rv-count").textContent = String(EJ.get("review").items.length);
   }
 
   function wordById(id) {
@@ -38,29 +38,39 @@
     return null;
   }
 
-  // 단어장: 맞힌 단어를 최근 순으로 표시. 없으면 빈 상태 화면
-  function renderWordbook() {
-    var items = EJ.get("wordbook").items.slice().reverse();
-    var list = document.getElementById("wb-list");
+  // 틀린 단어 복습: 틀린 단어를 단계별로 묶어(오래된 순) 보여 준다. 없으면 빈 상태 화면
+  function renderReview() {
+    var items = EJ.get("review").items;
+    var list = document.getElementById("rv-list");
     list.textContent = "";
-    document.getElementById("wb-full").style.display = items.length ? "block" : "none";
-    document.getElementById("wb-empty").style.display = items.length ? "none" : "block";
-    document.getElementById("wb-sum").textContent = "모은 단어 " + items.length + "개";
-    for (var i = 0; i < items.length; i++) {
-      var w = wordById(items[i].id);
-      var row = document.createElement("div");
-      row.className = "chunk word";
-      var e = document.createElement("span"); e.className = "e"; e.textContent = w ? w.en : items[i].id;
-      var k = document.createElement("span"); k.className = "k"; k.textContent = w ? w.ko : "?";
-      row.appendChild(e); row.appendChild(k);
-      list.appendChild(row);
+    document.getElementById("rv-full").style.display = items.length ? "block" : "none";
+    document.getElementById("rv-empty").style.display = items.length ? "none" : "block";
+    document.getElementById("rv-sum").textContent = "틀린 단어 " + items.length + "개";
+    for (var n = 1; n <= STAGES.length; n++) {
+      var its = [], i;
+      for (i = 0; i < items.length; i++) if (items[i].level === n) its.push(items[i]);
+      if (!its.length) continue;
+      var head = document.createElement("div"); head.className = "rgrp";
+      var tt = document.createElement("b"); tt.textContent = STAGES[n - 1].name + " · " + its.length + "개";
+      var bt = document.createElement("button"); bt.className = "btn"; bt.textContent = "복습 시작"; bt.dataset.review = String(n);
+      head.appendChild(tt); head.appendChild(bt);
+      list.appendChild(head);
+      for (i = 0; i < its.length; i++) {
+        var w = wordById(its[i].id);
+        var row = document.createElement("div");
+        row.className = "chunk word";
+        var e = document.createElement("span"); e.className = "e"; e.textContent = w ? w.en : its[i].id;
+        var k = document.createElement("span"); k.className = "k"; k.textContent = w ? w.ko : "?";
+        row.appendChild(e); row.appendChild(k);
+        list.appendChild(row);
+      }
     }
   }
 
   // ===== 게임 흐름 (3단계) =====
   var cur = null;       // 진행 중인 판 상태(Game.start 결과)
   var timer = null;     // 정답 후 자동 넘김
-  var lastStage = 1, lastMode = "letter";
+  var lastStage = 1, lastMode = "letter", lastReview = false;   // lastReview: 방금 한 판이 틀린 단어 복습인지
   function $(id) { return document.getElementById(id); }
   function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
 
@@ -127,8 +137,8 @@
     var q = Game.current(cur);
     renderHp();
     $("g-score").textContent = String(cur.score);
-    $("g-count").textContent = (cur.index + 1) + " / 10";
-    $("g-bar").style.width = (cur.index * 10) + "%";
+    $("g-count").textContent = (cur.index + 1) + " / " + cur.total;
+    $("g-bar").style.width = (cur.index * 100 / cur.total) + "%";
     $("g-combo").textContent = String(cur.combo);
     var hb = $("g-hint");
     hb.textContent = "힌트 " + cur.hintsLeft;
@@ -265,7 +275,8 @@
 
   function startGame(stage, mode) {
     clearTimer();
-    lastStage = stage; lastMode = mode;
+    lastStage = stage; lastMode = mode; lastReview = false;
+    $("game").classList.remove("review");
     if (mode === "listen" && !Sound.ok()) return false;
     var g = Game.start({ stage: stage, mode: mode, words: wordsOfStage(stage, mode) });
     if (!g) return false;
@@ -275,9 +286,26 @@
     return true;
   }
 
+  // 틀린 단어 복습 시작: 그 단계의 틀린 단어를 오래된 순으로 최대 10개, 뜻 맞추기 방식(체력·점수·힌트 없음)
+  function startReview(stage) {
+    clearTimer();
+    var its = EJ.get("review").items, ws = [], i;
+    for (i = 0; i < its.length; i++) if (its[i].level === stage) { var w = wordById(its[i].id); if (w) ws.push(w); }
+    if (!ws.length) return false;
+    var g = Game.start({ stage: stage, mode: "meaning", words: ws, pool: wordsOfStage(stage, "meaning"), total: Math.min(10, ws.length), review: true, ordered: true });
+    if (!g) return false;
+    lastStage = stage; lastMode = "meaning"; lastReview = true;
+    cur = g;
+    $("game").classList.add("review");
+    $("g-rtag").textContent = "틀린 단어 복습 · " + STAGES[stage - 1].name;
+    show("game");
+    renderQuestion();
+    return true;
+  }
+
   // 정답/오답 공통 표시: 점수·연속·체력·안내 문구·다음 버튼
   function feedback(r, q, wrongText) {
-    sfx(r.correct ? (cur.combo > 0 && cur.combo % 3 === 0 ? "combo" : "correct") : "wrong");   // 연속 정답 3·6·9회째는 combo 소리
+    sfx(r.correct ? (!cur.review && cur.combo > 0 && cur.combo % 3 === 0 ? "combo" : "correct") : "wrong");   // 연속 정답 3·6·9회째는 combo 소리
     $("g-hint").disabled = true;
     $("g-score").textContent = String(cur.score);
     $("g-combo").textContent = String(cur.combo);
@@ -285,7 +313,7 @@
     var say = el("div", "say " + (r.correct ? "good" : "bad"));
     if (r.correct) {
       say.textContent = "정답이에요!" + (r.healed ? " 체력 +1" : "");
-      $("g-card").appendChild(el("span", "gain", "+" + r.gain));
+      if (!cur.review) $("g-card").appendChild(el("span", "gain", "+" + r.gain));
     } else {
       say.textContent = wrongText;
     }
@@ -357,8 +385,37 @@
     hb.disabled = true;
   }
 
+  // 복습이 끝날 때 한 번만 저장: 맞힌 단어를 틀린 단어 목록에서 뺀다(틀린 단어는 그대로 남는다). 단계 등급·점수는 기록하지 않는다
+  function finishReview() {
+    clearTimer();
+    Sound.stop();
+    var r = Game.result(cur), stage = lastStage, i;
+    EJ.removeWrongs(r.correctIds);
+    var left = 0, its = EJ.get("review").items;
+    for (i = 0; i < its.length; i++) if (its[i].level === stage) left++;
+    cur = null;
+    $("r-label").textContent = STAGES[stage - 1].name + " · 틀린 단어 복습";
+    var badge = $("r-badge"); badge.textContent = "✓"; badge.className = "badge pop";
+    $("r-score").textContent = r.answered + "개 중 " + r.correct + "개 맞힘";
+    $("r-l1").textContent = "맞힘"; $("r-correct2").textContent = String(r.correct);
+    $("r-l2").textContent = "다시 틀림"; $("r-combo").textContent = String(r.answered - r.correct);
+    $("r-new-l").textContent = "남은 단어"; $("r-new").textContent = String(left);
+    var ban = $("r-banner"); ban.textContent = "";
+    if (!left) ban.appendChild(el("div", "banner up", STAGES[stage - 1].name + " 복습을 모두 마쳤어요!"));
+    else if (r.correct) ban.appendChild(el("div", "banner up", "맞힌 " + r.correct + "개는 목록에서 빠졌어요!"));
+    var nb = $("r-next"), ag = $("r-again");
+    ag.style.display = "none";
+    if (left) { nb.style.display = ""; nb.className = "btn ib"; nb.querySelector(".t").textContent = "다시 복습"; $("r-next-s").textContent = "남은 " + left + "개"; }
+    else nb.style.display = "none";
+    $("r-modes-t").textContent = "목록"; $("r-modes-s").textContent = "틀린 단어 복습";
+    sfx("clear");
+    $("res-modal").style.display = "grid";
+    (left ? nb : $("r-modes")).focus();
+  }
+
   // 한 판이 끝날 때 한 번만 저장
   function finish() {
+    if (cur && cur.review) { finishReview(); return; }
     clearTimer();
     Sound.stop();
     var r = Game.result(cur);
@@ -387,6 +444,9 @@
     cur = null;
     if (set.result || r.over) {
       $("r-label").textContent = lab;
+      $("r-l1").textContent = "정답"; $("r-l2").textContent = "최고 연속";   // 복습 팝업에서 바꾼 문구를 되돌린다
+      $("r-modes-t").textContent = "모드"; $("r-modes-s").textContent = "선택";
+      $("r-next").style.display = "";
       var badge = $("r-badge"); badge.textContent = "";
       badge.className = "badge pop" + (r.grade === "C" ? " gray" : "");
       badge.appendChild(document.createTextNode(r.grade));
@@ -455,7 +515,7 @@
       screens[i].classList.toggle("on", screens[i].id === name);
     }
     if (name === "home") renderHome();
-    if (name === "wordbook") renderWordbook();
+    if (name === "review") renderReview();
     if (name === "modes") renderModes();
     if (name === "settings") renderSettings();
     window.scrollTo(0, 0);
@@ -543,6 +603,8 @@
       show(go.dataset.go);
       return;
     }
+    var rb = t.closest("[data-review]");
+    if (rb && !rb.disabled) { startReview(+rb.dataset.review); return; }
     var st = t.closest("[data-start]");
     if (st && !st.disabled) { startGame(lastStage, st.dataset.start); return; }
     var op = t.closest(".opt");
@@ -554,9 +616,9 @@
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
     if (t.closest("#exit-yes")) { closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
-    if (t.closest("#r-next")) { closeRes(); startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
+    if (t.closest("#r-next")) { closeRes(); if (lastReview) { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
     if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
-    if (t.closest("#r-modes")) { closeRes(); $("modes-title").textContent = STAGES[lastStage - 1].name; show("modes"); return; }
+    if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = STAGES[lastStage - 1].name; show("modes"); return; }
   });
 
   // 키보드: 방향키로 활성 보기 사이 이동 (Enter는 버튼 기본 동작)
@@ -596,5 +658,5 @@
   });
 
   var h = (location.hash || "#home").slice(1);
-  show(h === "modes" || h === "wordbook" || h === "settings" ? h : "home");
+  show(h === "modes" || h === "review" || h === "settings" ? h : h === "wordbook" ? "review" : "home");
 })();

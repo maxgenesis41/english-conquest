@@ -4,6 +4,7 @@
 //  - 정답 100점 + 연속 정답 보너스(2회째부터 +10씩, 최대 +50), 힌트 쓴 문제는 점수(보너스 포함) 절반
 //  - 오답 시 체력 -1, 연속 정답 3회마다 체력 +1(최대 5), 체력 0이면 즉시 종료
 //  - 등급: 정답 10개 S, 9개 A, 7~8개 B, 6개 이하 C (체력 0 종료도 C)
+//  - 틀린 단어 복습(v0.30): review=true면 체력·종료 없음, total(문제 수)은 10 이하, ordered면 받은 순서대로 출제
 var Game = (function () {
   "use strict";
 
@@ -74,17 +75,19 @@ var Game = (function () {
   function start(o) {
     var rng = o.rng || Math.random;
     var words = o.words || [];
-    if (words.length < TOTAL) return null;
-    var picked = shuffle(words, rng).slice(0, TOTAL);
+    var total = o.total || TOTAL;
+    if (words.length < total) return null;
+    var pool = o.pool || words;   // 보기(오답) 후보: 복습은 같은 단계 전체 단어
+    var picked = o.ordered ? words.slice(0, total) : shuffle(words, rng).slice(0, total);
     var qs = [];
     for (var i = 0; i < picked.length; i++) {
       qs.push(o.mode === "letter" ? letterQuestion(picked[i], rng) :
               o.mode === "spell" ? spellQuestion(picked[i], rng) :
               o.mode === "sentence" ? sentenceQuestion(picked[i], rng) :
-              o.mode === "listen" ? listenQuestion(picked[i], words, rng) : meaningQuestion(picked[i], words, rng));
+              o.mode === "listen" ? listenQuestion(picked[i], pool, rng) : meaningQuestion(picked[i], pool, rng));
     }
     return {
-      stage: o.stage, mode: o.mode, questions: qs, index: 0,
+      stage: o.stage, mode: o.mode, questions: qs, index: 0, total: total, review: !!o.review,
       hp: MAX_HP, score: 0, combo: 0, bestCombo: 0, correct: 0, answered: 0,
       hintsLeft: HINTS, hintUsed: false, removed: [], picked: null,
       ending: false, over: false, finished: false, correctIds: [], wrongIds: []
@@ -118,10 +121,12 @@ var Game = (function () {
     } else {
       g.combo = 0;
       g.wrongIds.push(q.id);
-      g.hp--;
-      if (g.hp <= 0) { g.hp = 0; g.over = true; fb.over = true; }
+      if (!g.review) {   // 복습은 체력이 없다
+        g.hp--;
+        if (g.hp <= 0) { g.hp = 0; g.over = true; fb.over = true; }
+      }
     }
-    g.ending = g.over || g.index >= TOTAL - 1;
+    g.ending = g.over || g.index >= g.total - 1;
     fb.last = g.ending;
     return fb;
   }
@@ -173,7 +178,7 @@ var Game = (function () {
   }
 
   function result(g) {
-    return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: HINTS - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice() };
+    return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: HINTS - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice(), total: g.total, review: g.review };
   }
 
   return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
