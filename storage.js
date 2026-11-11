@@ -9,6 +9,7 @@ var EJ = (function () {
   var GRADES = ["C", "B", "A", "S"]; // 낮은 등급 -> 높은 등급
   var STAGE_COUNT = 4;
   var STYLES = ["retro", "bright", "chime"]; // 효과음 스타일: 레트로 8비트 / 밝은 게임풍 / 부드러운 차임
+  var NEXTS = ["order", "same"];
 
   var memory = {};   // 저장이 막혔을 때만 쓰는 임시 보관(새로고침하면 사라짐)
   var blocked = false;
@@ -24,7 +25,7 @@ var EJ = (function () {
       return { v: FORMAT, stages: stages, modes: {} };
     }
     if (name === "wordbook") return { v: FORMAT, items: [] };
-    return { v: FORMAT, sound: true, mute: false, sfx: true, style: "retro", word: true };
+    return { v: FORMAT, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, next: "order" };
   }
 
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
@@ -52,6 +53,8 @@ var EJ = (function () {
     if (o.mute !== undefined && typeof o.mute !== "boolean") return false;
     if (o.sfx !== undefined && typeof o.sfx !== "boolean") return false;
     if (o.word !== undefined && typeof o.word !== "boolean") return false;
+    if (o.result !== undefined && typeof o.result !== "boolean") return false;
+    if (o.next !== undefined && NEXTS.indexOf(o.next) < 0) return false;
     if (o.style !== undefined && STYLES.indexOf(o.style) < 0) return false;
     return true;
   }
@@ -143,7 +146,8 @@ var EJ = (function () {
   // 소리 설정 1개 변경: key는 mute·sfx·word(true/false), style(STYLES 중 하나). 저장했으면 true
   function setSetting(key, value) {
     if (key === "style") { if (STYLES.indexOf(value) < 0) return false; }
-    else if (key === "mute" || key === "sfx" || key === "word") { if (typeof value !== "boolean") return false; }
+    else if (key === "next") { if (NEXTS.indexOf(value) < 0) return false; }
+    else if (key === "mute" || key === "sfx" || key === "word" || key === "result") { if (typeof value !== "boolean") return false; }
     else return false;
     var st = get("settings");
     st[key] = value;
@@ -160,7 +164,7 @@ var EJ = (function () {
   }
 
   return {
-    KEYS: KEYS, GRADES: GRADES, STYLES: STYLES,
+    KEYS: KEYS, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
     get: get, set: set, recordResult: recordResult, addWord: addWord, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },

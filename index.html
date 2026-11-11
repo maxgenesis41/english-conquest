@@ -30,7 +30,7 @@
     </div>
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="wordbook">내 단어장 (<span id="wb-count">0</span>)</button></div>
-    <p class="ver">v0.26</p>
+    <p class="ver">v0.27</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -71,25 +71,28 @@
     </div>
   </section>
 
-  <!-- 4. 결과 -->
-  <section class="screen" id="result">
-    <div class="top"><h1 class="pop" style="margin-right:0">결과</h1></div>
-    <div class="chunk res">
+  <!-- 4. 결과 (작은 팝업. 설정에서 끄면 바로 다음 판으로 이동) -->
+  <div class="shade" id="res-modal" style="display:none">
+    <div class="chunk modal res" role="dialog" aria-modal="true" aria-labelledby="r-label">
       <span class="label" id="r-label"></span>
-      <div class="badge pop" id="r-badge"></div>
-      <div class="score2" id="r-score"></div>
+      <div class="rline">
+        <div class="badge pop" id="r-badge"></div>
+        <div class="rtx"><div class="score2" id="r-score"></div></div>
+      </div>
       <div class="stats">
-        <div><small>정답</small><b id="r-correct"></b></div>
+        <div><small>정답</small><b id="r-correct2"></b></div>
         <div><small>최고 연속</small><b id="r-combo"></b></div>
         <div><small id="r-new-l">새 단어</small><b id="r-new"></b></div>
       </div>
+      <div id="r-banner"></div>
+      <div class="btns3">
+        <button class="btn ib" id="r-next"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span class="t">계속하기</span><span class="s" id="r-next-s"></span></button>
+        <button class="btn ib blue" id="r-again"><svg class="ic" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg><span class="t">다시</span><span class="s">같은 게임</span></button>
+        <button class="btn ib white" id="r-modes"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h2v2H4zm4 0h12v2H8zM4 11h2v2H4zm4 0h12v2H8zM4 16h2v2H4zm4 0h12v2H8z"/></svg><span class="t">모드</span><span class="s">선택</span></button>
+      </div>
     </div>
-    <div id="r-banner"></div>
-    <div class="btns">
-      <button class="btn" id="r-again">다시 하기</button>
-      <button class="btn blue" data-go="home">홈으로</button>
-    </div>
-  </section>
+  </div>
+  <div class="toast" id="toast" style="display:none" role="status"></div>
 
   <!-- 5. 내 단어장 -->
   <section class="screen" id="wordbook">
@@ -124,7 +127,12 @@
 
     <h2 class="sh">게임</h2>
     <div class="chunk set">
-      <div class="row"><div class="rt"><b>결과 화면 보기</b><span>끄면 바로 다음 판으로 이동</span></div><span class="soonchip">준비 중</span><span class="sw on dis"></span></div>
+      <div class="row"><div class="rt"><b>결과 창 보기</b><span>끄면 바로 다음 판 (체력 0은 항상 표시)</span></div><button type="button" class="sw on" id="sw-result" role="switch" aria-checked="true" aria-label="결과 창 보기"></button></div>
+      <div class="sty" id="next-box" role="radiogroup" aria-label="다음 판 방식">
+        <div class="stl">다음 판 방식</div>
+        <div class="so on" data-next="order" role="radio" aria-checked="true" tabindex="0"><span class="rd"></span><div class="rt"><b>모드 순서대로</b><span>글자 → 뜻 → 철자 → 문장 → 듣기</span></div></div>
+        <div class="so" data-next="same" role="radio" aria-checked="false" tabindex="0"><span class="rd"></span><div class="rt"><b>같은 게임 이어서</b><span>방금 한 게임을 계속</span></div></div>
+      </div>
       <div class="row"><div class="rt"><b>난이도 조정</b><span>레벨업 조건·힌트·제한시간</span></div><span class="soonchip">준비 중</span></div>
     </div>
 

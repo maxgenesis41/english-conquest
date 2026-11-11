@@ -375,26 +375,70 @@
     }
     var after = EJ.get("progress").stages[String(lastStage + 1)];
     var newlyUnlocked = !!(after && after.unlocked && !wasUnlocked);
-    $("r-label").textContent = STAGES[lastStage - 1].name + " · " + MODE_NAMES[lastMode];
-    var badge = $("r-badge"); badge.textContent = "";
-    badge.className = "badge pop" + (r.grade === "C" ? " gray" : "");
-    badge.appendChild(document.createTextNode(r.grade));
-    if (r.grade === "S" || r.grade === "A") {
-      var st = el("span", "st"); st.textContent = "★"; st.style.cssText = "top:6px;right:18px";
-      badge.appendChild(st);
-    }
-    $("r-score").textContent = r.score + "점";
-    $("r-correct").textContent = r.correct + " / " + r.answered;
-    $("r-combo").textContent = String(r.bestCombo);
-    $("r-new-l").textContent = lastMode === "sentence" ? "힌트 사용" : "새 단어";
-    $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : newCount);
-    var ban = $("r-banner"); ban.textContent = "";
-    if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
-    if (newlyUnlocked) ban.appendChild(el("div", "banner up", STAGES[lastStage].name + "이 열렸어요!"));
+    var lab = STAGES[lastStage - 1].name + " · " + MODE_NAMES[lastMode];
+    var unlockMsg = newlyUnlocked ? STAGES[lastStage].name + "이 열렸어요!" : "";
+    var set = EJ.get("settings");
     cur = null;
-    sfx(r.over ? "over" : "clear");
-    show("result");
+    if (set.result || r.over) {
+      $("r-label").textContent = lab;
+      var badge = $("r-badge"); badge.textContent = "";
+      badge.className = "badge pop" + (r.grade === "C" ? " gray" : "");
+      badge.appendChild(document.createTextNode(r.grade));
+      if (r.grade === "S" || r.grade === "A") {
+        var st = el("span", "st"); st.textContent = "★"; st.style.cssText = "top:2px;right:8px";
+        badge.appendChild(st);
+      }
+      $("r-score").textContent = r.score + "점";
+      $("r-correct2").textContent = r.correct + " / " + r.answered;
+      $("r-combo").textContent = String(r.bestCombo);
+      $("r-new-l").textContent = lastMode === "sentence" ? "힌트 사용" : "새 단어";
+      $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : newCount);
+      var ban = $("r-banner"); ban.textContent = "";
+      if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
+      if (unlockMsg) ban.appendChild(el("div", "banner up", unlockMsg));
+      var nm = pickNext(set.next);
+      var nb = $("r-next"), ag = $("r-again");
+      var twoBtn = !(set.next === "order" && nm && nm !== lastMode);
+      if (twoBtn) { nb.querySelector(".t").textContent = "한 번 더"; $("r-next-s").textContent = "같은 게임"; nb.dataset.mode = lastMode; }
+      else { nb.querySelector(".t").textContent = "계속하기"; $("r-next-s").textContent = MODE_NAMES[nm]; nb.dataset.mode = nm; }
+      ag.style.display = twoBtn ? "none" : "";
+      var failFirst = r.over && !twoBtn;   // 체력 0: 같은 게임 다시를 1순위(초록)로
+      nb.className = "btn ib" + (failFirst ? " blue" : "");
+      ag.className = "btn ib" + (failFirst ? "" : " blue");
+      sfx(r.over ? "over" : "clear");
+      $("res-modal").style.display = "grid"; nb.focus();
+    } else {
+      sfx("clear");
+      var m2 = pickNext(set.next) || lastMode;
+      if (!startGame(lastStage, m2)) startGame(lastStage, lastMode);
+      showToast(lab.split(" · ")[1] + " " + r.grade + " · " + r.score + "점 · " + r.correct + "/" + r.answered, unlockMsg);
+    }
   }
+
+  // 모드 순서대로 다음 판 고르기(할 수 없는 모드는 건너뜀). same이면 방금 모드
+  var MODE_ORDER = ["letter", "meaning", "spell", "sentence", "listen"];
+  function canPlay(m) {
+    if (m === "listen" && !Sound.ok()) return false;
+    return m === "sentence" || wordsOfStage(lastStage, m).length >= 10;
+  }
+  function pickNext(kind) {
+    if (kind !== "order") return lastMode;
+    var i0 = MODE_ORDER.indexOf(lastMode);
+    for (var k = 1; k <= MODE_ORDER.length; k++) {
+      var m = MODE_ORDER[(i0 + k) % MODE_ORDER.length];
+      if (canPlay(m)) return m;
+    }
+    return lastMode;
+  }
+  var toastT = null;
+  function showToast(text, sub) {
+    var t = $("toast"); t.textContent = text;
+    if (sub) t.appendChild(el("small", "", sub));
+    t.style.display = "";
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { t.style.display = "none"; }, 2200);
+  }
+  function closeRes() { $("res-modal").style.display = "none"; }
 
   function openExit() { $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
   function closeExit() { $("exit-modal").style.display = "none"; }
@@ -412,14 +456,19 @@
   }
 
   // 설정 화면: 저장된 값을 읽어 스위치·스타일을 표시한다(읽기만 하고 저장하지 않음)
-  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word" };
+  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word", "sw-result": "result" };
   function renderSettings() {
     var s = EJ.get("settings");
     function sw(id, on, dis) {
       var b = $(id); b.className = "sw " + (on ? "on" : "off");
       b.setAttribute("aria-checked", on ? "true" : "false"); b.disabled = !!dis;
     }
-    sw("sw-mute", s.mute, false); sw("sw-sfx", s.sfx, s.mute); sw("sw-word", s.word, s.mute);
+    sw("sw-mute", s.mute, false); sw("sw-sfx", s.sfx, s.mute); sw("sw-word", s.word, s.mute); sw("sw-result", s.result, false);
+    var nr = document.querySelectorAll("#next-box .so");
+    for (var q = 0; q < nr.length; q++) {
+      var non = nr[q].dataset.next === s.next;
+      nr[q].classList.toggle("on", non); nr[q].setAttribute("aria-checked", non ? "true" : "false");
+    }
     var off = s.mute || !s.sfx;
     $("sty-box").classList.toggle("off", off);
     var rows = document.querySelectorAll("#sty-box .so");
@@ -472,6 +521,8 @@
     if (swb && SW_KEYS[swb.id]) { if (!swb.disabled) toggleSetting(swb.id); return; }
     var pv = t.closest(".pl");
     if (pv) { if (!pv.disabled) previewStyle(pv.dataset.style); return; }
+    var nx = t.closest("#next-box .so");
+    if (nx) { EJ.setSetting("next", nx.dataset.next); renderSettings(); sfx("click"); return; }
     var so = t.closest("#sty-box .so");
     if (so) { if (so.getAttribute("aria-disabled") !== "true") chooseStyle(so.dataset.style); return; }
     var cb = t.closest("button");   // 버튼 클릭 효과음(정답 고르기·듣기·결과 보기는 다른 소리가 나므로 제외)
@@ -496,8 +547,10 @@
     if (t.closest("#g-next")) { next(); return; }
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
-    if (t.closest("#exit-yes")) { closeExit(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
-    if (t.closest("#r-again")) { startGame(lastStage, lastMode); return; }
+    if (t.closest("#exit-yes")) { closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
+    if (t.closest("#r-next")) { closeRes(); startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
+    if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
+    if (t.closest("#r-modes")) { closeRes(); $("modes-title").textContent = STAGES[lastStage - 1].name; show("modes"); return; }
   });
 
   // 키보드: 방향키로 활성 보기 사이 이동 (Enter는 버튼 기본 동작)
