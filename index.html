@@ -16,20 +16,21 @@
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17l-6 3.3 1.3-6.6L2.4 9.1l6.7-.8z"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0110 0v3h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1zm2 0h6V7a3 3 0 00-6 0v3z"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15.5 3.5L7 12l8.5 8.5 2.5-2.5L12 12l6-6z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><g><rect x="10" y="1.5" width="4" height="5" rx="1"/><rect x="10" y="17.5" width="4" height="5" rx="1"/><rect x="1.5" y="10" width="5" height="4" rx="1"/><rect x="17.5" y="10" width="5" height="4" rx="1"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(45 12 12)"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(135 12 12)"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(225 12 12)"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(315 12 12)"/><circle cx="12" cy="12" r="7.2"/></g><circle cx="12" cy="12" r="3" fill="#fff"/></symbol>
   <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 2s1 4-2 7c-2 2-4 4-4 8a6 6 0 0012 0c0-3-1.5-5-2.5-6 0 2-1 3-2 3 1-3 0-8-1.5-12z"/></symbol>
 </svg>
 <div class="app">
 
   <!-- 1. 홈 -->
   <section class="screen" id="home">
+    <button class="round gear" data-go="settings" aria-label="설정"><svg class="ic"><use href="#i-gear"/></svg></button>
     <div class="logo">
       <h1 class="pop">영어정복</h1>
       <p>단어·문장·듣기 모험</p>
     </div>
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="wordbook">내 단어장 (<span id="wb-count">0</span>)</button></div>
-    <p class="credit">단어 목록 출처: The CEFR-J Wordlist Version 1.5<br>Compiled by Yukio Tono,<br>Tokyo University of Foreign Studies<br>2026-11-10 다운로드 · 일부 단어 선정, 한글 뜻 추가</p>
-    <p class="ver">v0.24</p>
+    <p class="ver">v0.25</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -102,7 +103,35 @@
       <b>아직 모은 단어가 없어요</b>
       <span>게임에서 정답을 맞히면 여기에 쌓여요.</span>
     </div>
-    <p class="credit">단어 목록 출처: The CEFR-J Wordlist Version 1.5<br>Compiled by Yukio Tono,<br>Tokyo University of Foreign Studies<br>2026-11-10 다운로드 · 일부 단어 선정, 한글 뜻 추가</p>
+  </section>
+
+  <!-- 6. 설정 -->
+  <section class="screen" id="settings">
+    <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">설정</h1></div>
+
+    <h2 class="sh">소리</h2>
+    <div class="chunk set">
+      <div class="row"><div class="rt"><b>무음</b><span>모든 소리를 한 번에 끄기</span></div><span class="soonchip">준비 중</span><span class="sw off dis"></span></div>
+      <div class="row"><div class="rt"><b>효과음</b><span>버튼·정답·미션 클리어</span></div><span class="soonchip">준비 중</span><span class="sw on dis"></span></div>
+      <div class="row"><div class="rt"><b>단어 소리</b><span>문장 배열 단어 읽기</span></div><span class="soonchip">준비 중</span><span class="sw on dis"></span></div>
+    </div>
+
+    <h2 class="sh">게임</h2>
+    <div class="chunk set">
+      <div class="row"><div class="rt"><b>결과 화면 보기</b><span>끄면 바로 다음 판으로 이동</span></div><span class="soonchip">준비 중</span><span class="sw on dis"></span></div>
+      <div class="row"><div class="rt"><b>난이도 조정</b><span>레벨업 조건·힌트·제한시간</span></div><span class="soonchip">준비 중</span></div>
+    </div>
+
+    <h2 class="sh">배울 언어</h2>
+    <div class="chunk set">
+      <div class="row"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#fff"/><rect y="0.000" width="30" height="1.538" fill="#B22234"/><rect y="3.077" width="30" height="1.538" fill="#B22234"/><rect y="6.154" width="30" height="1.538" fill="#B22234"/><rect y="9.231" width="30" height="1.538" fill="#B22234"/><rect y="12.308" width="30" height="1.538" fill="#B22234"/><rect y="15.385" width="30" height="1.538" fill="#B22234"/><rect y="18.462" width="30" height="1.538" fill="#B22234"/><rect width="12.5" height="10.769" fill="#3C3B6E"/><circle cx="1.90" cy="2.20" r="0.62" fill="#fff"/><circle cx="4.80" cy="2.20" r="0.62" fill="#fff"/><circle cx="7.70" cy="2.20" r="0.62" fill="#fff"/><circle cx="10.60" cy="2.20" r="0.62" fill="#fff"/><circle cx="1.90" cy="5.10" r="0.62" fill="#fff"/><circle cx="4.80" cy="5.10" r="0.62" fill="#fff"/><circle cx="7.70" cy="5.10" r="0.62" fill="#fff"/><circle cx="10.60" cy="5.10" r="0.62" fill="#fff"/><circle cx="1.90" cy="8.00" r="0.62" fill="#fff"/><circle cx="4.80" cy="8.00" r="0.62" fill="#fff"/><circle cx="7.70" cy="8.00" r="0.62" fill="#fff"/><circle cx="10.60" cy="8.00" r="0.62" fill="#fff"/></svg><div class="rt"><b>영어</b><span>지금 배우는 언어</span></div><span class="sw on chk" aria-label="선택됨"></span></div>
+      <div class="row dimrow"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#BC002D"/></svg><div class="rt"><b>일본어</b></div><span class="soonchip">추후 추가</span></div>
+      <div class="row dimrow"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#DE2910"/><polygon points="5.00,2.20 5.67,4.27 7.85,4.27 6.09,5.55 6.76,7.63 5.00,6.35 3.24,7.63 3.91,5.55 2.15,4.27 4.33,4.27" fill="#FFDE00"/><polygon points="10.34,1.06 10.32,1.79 11.00,2.03 10.30,2.24 10.28,2.96 9.87,2.36 9.17,2.56 9.62,1.99 9.21,1.38 9.89,1.63" fill="#FFDE00"/><polygon points="12.71,3.49 12.38,4.14 12.89,4.65 12.17,4.54 11.84,5.19 11.73,4.47 11.01,4.36 11.66,4.03 11.55,3.31 12.06,3.82" fill="#FFDE00"/><polygon points="12.94,6.86 12.37,7.31 12.62,7.99 12.01,7.58 11.44,8.03 11.64,7.33 11.04,6.92 11.76,6.90 11.97,6.20 12.21,6.88" fill="#FFDE00"/><polygon points="10.98,9.67 10.27,9.77 10.14,10.49 9.82,9.84 9.10,9.94 9.62,9.43 9.31,8.78 9.95,9.12 10.47,8.62 10.34,9.33" fill="#FFDE00"/></svg><div class="rt"><b>중국어</b></div><span class="soonchip">추후 추가</span></div>
+      <div class="row dimrow"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#FE0000"/><rect width="15" height="10" fill="#000095"/><polygon points="10.18,4.65 11.90,5.00 10.18,5.35" fill="#fff"/><polygon points="9.99,6.04 11.31,7.20 9.64,6.64" fill="#fff"/><polygon points="9.14,7.14 9.70,8.81 8.54,7.49" fill="#fff"/><polygon points="7.85,7.68 7.50,9.40 7.15,7.68" fill="#fff"/><polygon points="6.46,7.49 5.30,8.81 5.86,7.14" fill="#fff"/><polygon points="5.36,6.64 3.69,7.20 5.01,6.04" fill="#fff"/><polygon points="4.82,5.35 3.10,5.00 4.82,4.65" fill="#fff"/><polygon points="5.01,3.96 3.69,2.80 5.36,3.36" fill="#fff"/><polygon points="5.86,2.86 5.30,1.19 6.46,2.51" fill="#fff"/><polygon points="7.15,2.32 7.50,0.60 7.85,2.32" fill="#fff"/><polygon points="8.54,2.51 9.70,1.19 9.14,2.86" fill="#fff"/><polygon points="9.64,3.36 11.31,2.80 9.99,3.96" fill="#fff"/><circle cx="7.5" cy="5" r="2.6" fill="#fff"/><circle cx="7.5" cy="5" r="2.2" fill="#000095"/><circle cx="7.5" cy="5" r="1.9" fill="#fff"/></svg><div class="rt"><b>대만어</b></div><span class="soonchip">추후 추가</span></div>
+    </div>
+
+    <h2 class="sh">출처</h2>
+    <div class="chunk set"><p class="src">단어 목록 출처: The CEFR-J Wordlist Version 1.5<br>Compiled by Yukio Tono,<br>Tokyo University of Foreign Studies<br>2026-11-10 다운로드 · 일부 단어 선정, 한글 뜻 추가</p></div>
   </section>
 
 </div>

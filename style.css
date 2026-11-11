@@ -231,3 +231,30 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 @media (max-width: 340px) { .opt.en { font-size: 19px; padding: 0 4px; } }
 .q .hint2 { font-size: 13px; color: var(--sub); font-weight: 600; }
 .q .reveal { font-size: 15px; font-weight: 700; margin-top: 8px; color: var(--ink); }
+
+/* 설정 화면 시안(B-1) */
+#home { position: relative; }
+.gear { position: absolute; top: 16px; right: 16px; z-index: 2; }
+#home .ver { margin-top: auto; }
+.sh { font-size: 15px; font-weight: 700; margin: 4px 4px 8px; color: var(--ink); }
+.set { padding: 2px 14px; margin-bottom: 16px; }
+.set .row { display: flex; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 2px solid #E3EBF7; }
+.set .row:last-child { border-bottom: 0; }
+.set .rt { flex: 1; min-width: 0; }
+.set .rt b { font-size: 16px; }
+.set .rt span { display: block; font-size: 12px; color: var(--sub); margin-top: 2px; }
+.set .soonchip { font-size: 11px; font-weight: 700; color: #7C8AA8; background: #fff; border: 2px solid #8C9AB8; border-radius: 999px; padding: 1px 8px; flex: none; }
+.sw { width: 52px; height: 30px; border-radius: 999px; border: 3px solid var(--ink); background: var(--gray); position: relative; flex: none; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid var(--ink); }
+.sw.on { background: var(--green); }
+.sw.on::after { left: 24px; }
+.sw.dis { opacity: .45; }
+.set .src { font-size: 12px; color: var(--sub); line-height: 1.6; padding: 10px 0; }
+
+.set .dimrow { opacity: .7; }
+.set .dimrow .rt b { color: #7C8AA8; }
+.sw.chk { width: 30px; height: 30px; background: var(--green); display: grid; place-items: center; }
+.sw.chk::after { left: auto; top: auto; position: static; width: 9px; height: 15px; border: 0; border-radius: 0; background: none; border-right: 4px solid #fff; border-bottom: 4px solid #fff; transform: translateY(-2px) rotate(45deg); box-sizing: content-box; }
+
+.flag { width: 42px; height: 28px; flex: none; border: 2px solid var(--ink); border-radius: 6px; box-sizing: content-box; display: block; }
+.set .row .rt { margin-left: 2px; }

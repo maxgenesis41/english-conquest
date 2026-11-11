@@ -477,5 +477,5 @@
   } catch (e) {}
 
   var h = (location.hash || "#home").slice(1);
-  show(h === "modes" || h === "wordbook" ? h : "home");
+  show(h === "modes" || h === "wordbook" || h === "settings" ? h : "home");
 })();
