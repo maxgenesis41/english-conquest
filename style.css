@@ -630,3 +630,30 @@ button.sw { padding: 0; cursor: pointer; }
   .ufx .bk { animation: ubk var(--d) ease-out var(--dl) 1 both; }
   .ufx .fw i { animation: ufw 1.1s cubic-bezier(.1,.7,.3,1) var(--dl) 1 both; }
 }
+
+/* v0.59 듣기 문장 보기: 한 줄에 하나씩(여러 줄 글자), 다시 듣기 횟수 표시 (P-7 고정 크기 안에서) */
+.opts.sl { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+.opt.en.sl { height: auto; min-height: 56px; font-size: 18px; line-height: 1.2; padding: 6px 12px; display: flex; align-items: center; justify-content: center; text-align: center; overflow-wrap: anywhere; }
+.spk.off { background: #B7C3D6; box-shadow: 0 6px 0 var(--ink); }
+.spk:disabled { cursor: default; }
+@media (max-height: 720px) {
+  #game .opts.sl { gap: 7px; }
+  #game .opt.en.sl { min-height: 46px; font-size: 16px; padding: 4px 10px; box-shadow: 0 4px 0 var(--ink), inset 0 -4px 0 rgba(36,51,107,.12); }
+}
+@media (max-height: 720px) {
+  #game #g-card[data-k="s"] { padding: 8px 10px 10px; }
+  #game #g-card[data-k="s"] .spk { width: 60px; height: 60px; margin: 2px auto 2px; }
+  #game #g-card[data-k="s"] .spk svg { width: 38px; height: 38px; }
+}
+@media (max-height: 600px) {
+  #game #g-card[data-k="s"] { padding: 6px 8px 8px; margin-bottom: 8px; }
+  #game #g-card[data-k="s"] .spk { width: 52px; height: 52px; border-width: 3px; box-shadow: 0 4px 0 var(--ink); }
+  #game #g-card[data-k="s"] .spk svg { width: 32px; height: 32px; }
+  #game .opts.sl { gap: 6px; }
+  #game .opt.en.sl { min-height: 42px; font-size: 15px; padding: 3px 8px; }
+}
+@media (max-height: 600px) {
+  #game #g-card[data-k="s"] .sub.fbmsg { font-size: 13px; padding: 2px 8px; line-height: 1.25; }
+  #game #g-card[data-k="s"] .reveal { font-size: 15px; margin-top: 4px; line-height: 1.25; }
+  #game #g-card[data-k="s"] .spk { margin: 0 auto 0; }
+}

@@ -209,12 +209,12 @@
     // 음성 목록이 아직 비어 있으면(비동기 로딩) 일단 가능으로 본다
     function ok() { if (!api()) return false; return voices().length === 0 || enVoices().length > 0; }
     function pick() { var e = enVoices(); for (var i = 0; i < e.length; i++) if (/^en[-_]US$/i.test(e[i].lang)) return e[i]; return e[0] || null; }
-    function speak(text, onstart, onend) {
+    function speak(text, onstart, onend, rate) {
       var s = api(); if (!s) return false;
       try {
         s.cancel();
         var u = new window.SpeechSynthesisUtterance(text);
-        u.lang = "en-US"; u.rate = 0.85;
+        u.lang = "en-US"; u.rate = rate || 0.85;
         var v = pick(); if (v) u.voice = v;
         u.onstart = function () { bgmDuck(true); if (onstart) onstart(); };
         u.onend = u.onerror = function () { bgmDuck(false); if (onend) onend(); };
@@ -228,15 +228,30 @@
   function sfx(name) { var s = EJ.get("settings"); if (s.mute || !s.sfx) return; SFX.play(name, s.style); }
   function wordSay(text) { var s = EJ.get("settings"); if (s.mute || !s.word || !Sound.ok()) return; Sound.speak(text); }
   var playTimer = null;
-  function speakCurrent() {
+  // 듣기 다시 듣기 표시(v0.59): 횟수 제한이 있으면 남은 횟수를 보여 주고, 0이면 스피커를 끈다(문제를 푼 뒤에는 횟수와 무관하게 들을 수 있다)
+  function drawReplays() {
+    var b = $("g-spk"), h = document.querySelector("#g-card .hint2");
+    if (!b || !cur) return;
+    var lim = cur.replaysMax > 0, left = cur.replaysLeft, off = lim && left <= 0 && cur.picked == null;
+    b.disabled = off; b.classList.toggle("off", off);
+    if (h) h.textContent = !lim ? "누르면 다시 들려요" : off ? "다시 듣기를 다 썼어요" : "다시 듣기 " + left + "회 남음";
+    b.setAttribute("aria-label", !lim ? "다시 듣기" : "다시 듣기 " + (off ? 0 : left) + "회 남음");
+  }
+  function hideReplayNote(q) { var h = document.querySelector("#g-card .hint2"); if (h && q.kind === "sentence") h.style.display = "none"; }   // 문장 듣기는 답한 뒤 칸이 모자라 안내 줄을 숨긴다
+  function speakCurrent(manual) {
     if (!cur || cur.mode !== "listen") return;
     var q = Game.current(cur), b = $("g-spk");
     if (!b) return;
+    if (manual === true && cur.picked == null) {   // 직접 누른 다시 듣기만 횟수를 센다(자동 재생은 세지 않음, 재생 중에는 무시)
+      if (cur.replaysMax > 0 && b.classList.contains("on")) return;
+      if (!Game.replay(cur)) return;
+      drawReplays();
+    }
     function off() { if (playTimer) { clearTimeout(playTimer); playTimer = null; } b.classList.remove("on"); beginLimit(); }
     b.classList.add("on");
     if (playTimer) clearTimeout(playTimer);
-    playTimer = setTimeout(off, 4000);
-    if (!Sound.ok() || !Sound.speak(q.en, null, off)) off();
+    playTimer = setTimeout(off, q.kind === "sentence" ? 8000 : 4000);
+    if (!Sound.ok() || !Sound.speak(q.en, null, off, q.rate)) off();
   }
 
   // ===== 배경음악 (v0.47): 게임 중에만 재생. 강도 = 연속 정답(3·5·10회)과 제한시간(주황·빨강) 중 높은 쪽(복습은 평상), 듣기는 상한 2·음량 절반, 음성 재생 중에는 줄임 =====
@@ -324,7 +339,8 @@
     var row = $("g-tmr");
     row.classList.remove("wait", "warn", "crit", "blink");
     if (!cur || !cur.limit || EJ.get("settings").timer === false) { row.style.display = "none"; return; }
-    tm = { ms: cur.limit * 1000, left: cur.limit * 1000, end: 0, iv: null, started: false, done: false, paused: false, sec: -1, zone: 0, nextTick: 0 };
+    var lms = cur.limit * (Game.current(cur).mul || 1) * 1000;   // 한글 뜻 듣기(v0.60)는 생각 시간 2배
+    tm = { ms: lms, left: lms, end: 0, iv: null, started: false, done: false, paused: false, sec: -1, zone: 0, nextTick: 0 };
     row.style.display = "flex";
     if (cur.mode === "listen") drawLimit();   // 듣기: 문제 소리가 끝나면 시작(speakCurrent의 off에서 beginLimit)
     else beginLimit();
@@ -355,8 +371,8 @@
         opts[i].classList.add(i === q.answer ? "right" : "dim");
       }
       if (cur.mode === "letter") { var tl = $("g-tiles").children[q.blank]; tl.textContent = q.options[q.answer]; tl.className = "bad"; }
-      if (cur.mode === "listen") $("g-card").appendChild(el("div", "reveal", q.en + " = " + q.ko));
-      ans = q.en + " = " + q.ko;
+      if (cur.mode === "listen") { $("g-card").appendChild(el("div", "reveal", q.kind === "sentence" ? q.ko : q.en + " = " + q.ko)); hideReplayNote(q); }
+      ans = q.kind === "sentence" ? "\"" + q.en + "\"" : q.en + " = " + q.ko;
     }
     feedback(r, q, "시간이 다 됐어요. 정답: " + ans);
   }
@@ -379,9 +395,10 @@
     var bs = $("g-opts").querySelectorAll(".opt.en"), i;
     if (!bs.length) return;
     for (i = 0; i < bs.length; i++) bs[i].style.fontSize = "";
+    var sl = bs[0].classList.contains("sl");   // 문장 보기: 여러 줄이라 높이가 넘치는지로 맞춘다
     var fs = parseFloat(getComputedStyle(bs[0]).fontSize);
-    function over() { for (var k = 0; k < bs.length; k++) if (bs[k].scrollWidth > bs[k].clientWidth) return true; return false; }
-    while (fs > 12 && over()) {
+    function over() { for (var k = 0; k < bs.length; k++) if (bs[k].scrollWidth > bs[k].clientWidth || (sl && bs[k].scrollHeight > bs[k].clientHeight + 1)) return true; return false; }
+    while (fs > (sl ? 11 : 12) && over()) {
       fs -= 1;
       for (i = 0; i < bs.length; i++) bs[i].style.fontSize = fs + "px";
     }
@@ -414,6 +431,7 @@
     $("g-erase").style.display = isOrder ? "" : "none";
     spell = isOrder ? { seq: [] } : null;
     var card = $("g-card"); card.textContent = "";
+    card.dataset.k = (cur.mode === "listen" && q.kind === "sentence") ? "s" : "";
     fxShow(false);   // 연속이 이어지는 동안 새 문제에서도 연출 유지
     var box = $("g-opts"); box.textContent = "";
     box.className = "opts";
@@ -449,7 +467,7 @@
       box.className = "wpool";
       renderSpell();
     } else if (cur.mode === "listen") {
-      card.appendChild(el("div", "sub", "소리를 듣고 알맞은 단어를 골라 주세요"));
+      card.appendChild(el("div", "sub", q.kind === "sentence" ? "소리를 듣고 알맞은 문장을 골라 주세요" : q.kind === "mean" ? "소리를 듣고 알맞은 뜻을 골라 주세요" : "소리를 듣고 알맞은 단어를 골라 주세요"));
       var sp = el("button", "spk"); sp.id = "g-spk"; sp.setAttribute("aria-label", "다시 듣기");
       sp.innerHTML = '<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z" fill="#fff"/><path d="M15.5 9a4.2 4.2 0 010 6"/><path d="M18 6.5a8 8 0 010 11"/></svg>';
       card.appendChild(sp);
@@ -460,14 +478,14 @@
     }
     if (!isOrder) {
       for (var k = 0; k < q.options.length; k++) {
-        var b = el("button", "opt" + (cur.mode === "meaning" ? " txt" : cur.mode === "listen" ? " en" : ""), q.options[k]);
+        var b = el("button", "opt" + (cur.mode === "meaning" ? " txt" : cur.mode === "listen" ? (q.kind === "sentence" ? " en sl" : q.kind === "mean" ? " txt" : " en") : ""), q.options[k]);
         b.dataset.i = String(k);
         box.appendChild(b);
       }
     }
     var first = box.querySelector(".opt");
     if (first) first.focus();
-    if (cur.mode === "listen") { fitListen(); setTimeout(speakCurrent, 250); }   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
+    if (cur.mode === "listen") { if (q.kind === "sentence") box.classList.add("sl"); drawReplays(); fitListen(); setTimeout(speakCurrent, 250); }   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
   }
 
   // 철자 쓰기: 칸과 타일을 현재 입력(spell.seq)에 맞게 다시 그린다
@@ -548,7 +566,7 @@
     lastStage = stage; lastMode = mode; lastReview = false;
     $("game").classList.remove("review");
     if (mode === "listen" && !Sound.ok()) return false;
-    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode) });
+    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode), sentences: mode === "listen" ? wordsOfStage(stage, "sentence") : undefined, sound: mode === "listen" && typeof SOUND !== "undefined" ? SOUND : undefined, allWords: mode === "listen" ? ALLW : undefined });
     if (!g) return false;
     cur = g;
     show("game");
@@ -622,8 +640,8 @@
       tl.textContent = q.options[q.answer];
       tl.className = r.correct ? "fill" : "bad";
     }
-    if (cur.mode === "listen") $("g-card").appendChild(el("div", "reveal", q.en + " = " + q.ko));
-    feedback(r, q, cur.mode === "meaning" ? "아쉬워요. " + q.en + " = " + q.ko : "아쉬워요. 정답은 " + q.en + "이에요");
+    if (cur.mode === "listen") { $("g-card").appendChild(el("div", "reveal", q.kind === "sentence" ? q.ko : q.en + " = " + q.ko)); hideReplayNote(q); }
+    feedback(r, q, (cur.mode === "meaning" || q.kind === "mean") ? "아쉬워요. " + q.en + " = " + q.ko : q.kind === "sentence" ? "아쉬워요. 정답은 \"" + q.en + "\"예요" : "아쉬워요. 정답은 " + q.en + "이에요");
   }
 
   function next() {
@@ -1045,7 +1063,7 @@
     if (st && !st.disabled) { startGame(lastStage, st.dataset.start); return; }
     var op = t.closest(".opt");
     if (op && !op.disabled && op.parentNode.id === "g-opts") { onPick(+op.dataset.i); return; }
-    if (t.closest("#g-spk")) { speakCurrent(); return; }
+    if (t.closest("#g-spk")) { speakCurrent(true); return; }
     if (t.closest("#g-hint")) { onHint(); return; }
     if (t.closest("#g-erase")) { spellErase(); return; }
     if (t.closest("#g-next")) { next(); return; }

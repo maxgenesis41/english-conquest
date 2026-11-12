@@ -25,6 +25,8 @@
 
 브라우저 내장 음성 합성(Web Speech API)을 사용합니다. 영어 음성이 없는 기기에서는 듣기 모드만 비활성화되고 나머지 모드는 정상 동작합니다.
 
+듣기 문제는 등급이 오를수록 어려워집니다. 낮은 등급은 확연히 다른 단어 4개 중에서 고르고, 중간 등급은 발음이 비슷한 단어 4개 중에서 고르며, 높은 등급은 소리를 듣고 한글 뜻을 고릅니다(생각 시간 2배). 비슷한 발음은 아래 발음 사전으로 계산합니다.
+
 ## 출처와 이용 조건
 
 - 영어 단어 목록(Lv1~91, 일부 선정, 한글 뜻 추가):
@@ -46,6 +48,14 @@
 
 - 이 프로젝트는 위 목록에서 일부 단어를 선정하고 한글 뜻을 직접 추가했습니다(변경됨). 변경한 단어 데이터(`data/words-adv.js`)도 같은 CC BY-SA 4.0으로 배포합니다. 원 자료는 어떠한 보증 없이 있는 그대로 제공되며, 이 프로젝트의 단어 데이터에도 오류가 있을 수 있습니다
 - 위 라이선스는 `data/words-adv.js`에 적용됩니다. 앱 코드와 다른 데이터 파일은 이 라이선스의 대상이 아닙니다
+- 단어 발음 기호(`data/sound.js`, 듣기 모드의 비슷한 발음 보기 계산용):
+
+  ```
+  The Carnegie Mellon Pronouncing Dictionary (CMUdict 0.7b), Copyright (C) 1993-2015 Carnegie Mellon University.
+  https://github.com/cmusphinx/cmudict
+  ```
+
+  이용 조건 원문은 `data/sound.js` 맨 위에 있습니다. 철자를 발음 기호로 바꿔 한 글자씩 저장한 것입니다(변경됨).
 - 한글 뜻과 모든 문장: 직접 작성
 - 글꼴: Pretendard (SIL Open Font License 1.1, `fonts/LICENSE.txt` 참조)
 - 코드: 순수 HTML·CSS·JavaScript(외부 라이브러리 없음)
@@ -62,4 +72,5 @@
 | `storage.js` | 브라우저 로컬 저장 |
 | `data/words.js`, `data/sentences.js` | 단어(Lv1~91)·문장 데이터 |
 | `data/words-adv.js` | 고급 단어 데이터(Octanove, CC BY-SA 4.0) |
+| `data/sound.js` | 단어 발음 기호(CMU 발음 사전, 듣기 모드 비슷한 발음 보기용) |
 | `fonts/` | Pretendard 글꼴과 라이선스 |
