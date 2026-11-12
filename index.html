@@ -31,7 +31,7 @@
     </div>
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
-    <p class="ver">v0.46</p>
+    <p class="ver">v0.47</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -127,6 +127,8 @@
         <div class="so" data-style="chime" role="radio" aria-checked="false" tabindex="0"><span class="rd"></span><div class="rt"><b>부드러운 차임</b><span>맑은 종소리, 귀가 편함</span></div><button class="pl" data-style="chime" aria-label="듣기"><svg viewBox="0 0 24 24" class="ic"><path d="M8 5v14l11-7z"/></svg></button></div>
       </div>
       <div class="row"><div class="rt"><b>단어 소리</b><span>문장 배열 단어 읽기</span></div><button type="button" class="sw on" id="sw-word" role="switch" aria-checked="true" aria-label="단어 소리"></button></div>
+      <div class="row"><div class="rt"><b>배경음악</b><span>게임 중 흐르는 음악 · 콤보·시간이 줄면 빨라져요</span></div><button type="button" class="sw on" id="sw-bgm" role="switch" aria-checked="true" aria-label="배경음악"></button></div>
+      <div class="row vol" id="bgm-vol-row"><div class="vt"><b>배경음악 볼륨</b><em id="bgm-vol-val">100%</em></div><div class="vs"><span class="vl">작게</span><input type="range" id="bgm-vol" min="0" max="100" step="10" value="100" aria-label="배경음악 볼륨"><span class="vl">크게</span></div><span class="vh">듣기 문제에서는 소리가 자동으로 줄어들어요</span></div>
     </div>
 
     <h2 class="sh">게임</h2>
@@ -160,6 +162,7 @@
 <script src="storage.js"></script>
 <script src="game.js"></script>
 <script src="sfx.js"></script>
+<script src="bgm.js"></script>
 <script src="app.js"></script>
 <script>if ("serviceWorker" in navigator && location.protocol !== "file:") { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
 </body>

@@ -204,11 +204,12 @@
         var u = new window.SpeechSynthesisUtterance(text);
         u.lang = "en-US"; u.rate = 0.85;
         var v = pick(); if (v) u.voice = v;
-        u.onstart = onstart; u.onend = onend; u.onerror = onend;
+        u.onstart = function () { bgmDuck(true); if (onstart) onstart(); };
+        u.onend = u.onerror = function () { bgmDuck(false); if (onend) onend(); };
         s.speak(u); return true;
       } catch (e) { return false; }
     }
-    function stop() { try { var s = api(); if (s) s.cancel(); } catch (e) {} }
+    function stop() { try { var s = api(); if (s) s.cancel(); } catch (e) {} bgmDuck(false); }
     return { ok: ok, speak: speak, stop: stop };
   })();
   // 소리 설정(저장값): 무음·효과음·스타일·단어 소리. 듣기 게임의 문제 소리는 무음이어도 나온다
@@ -224,6 +225,40 @@
     if (playTimer) clearTimeout(playTimer);
     playTimer = setTimeout(off, 4000);
     if (!Sound.ok() || !Sound.speak(q.en, null, off)) off();
+  }
+
+  // ===== 배경음악 (v0.47): 게임 중에만 재생. 강도 = 연속 정답(3·5·10회)과 제한시간(주황·빨강) 중 높은 쪽(복습은 평상), 듣기는 상한 2·음량 절반, 음성 재생 중에는 줄임 =====
+  var bgmOn = false, bgmDk = null, bgmPv = null;
+  function bgmMul(s) { return (s.bgmVol === undefined ? 100 : s.bgmVol) / 100 * 1.6; }   // 슬라이더 100% = 소리 점검에서 정한 1.6배
+  function bgmWanted(s) { return !!(cur && $("game").classList.contains("on") && !s.mute && s.bgm !== false && s.bgmVol !== 0); }
+  function bgmLevel() {
+    if (!cur || cur.review) return 0;
+    var c = cur.combo, lv = c >= 10 ? 3 : c >= 5 ? 2 : c >= 3 ? 1 : 0;
+    if (tm && tm.started && !tm.done && !tm.paused) {   // 제한시간: 주황 구간 2, 빨강 구간 4
+      var left = Math.max(0, tm.end - Date.now()), span = Math.max(3000, tm.ms * 0.25);
+      lv = Math.max(lv, left <= span ? 4 : left <= tm.ms * 0.5 ? 2 : 0);
+    }
+    return lv;
+  }
+  function bgmSync() {   // 지금 상태(화면·설정·판)에 맞게 시작·정지·강도·음량을 맞춘다
+    var s = EJ.get("settings");
+    if (!bgmWanted(s)) { if (bgmOn) { bgmOn = false; BGM.stop(0.5); } return; }
+    BGM.setVolume(bgmMul(s)); BGM.setListen(cur.mode === "listen"); BGM.setLevel(bgmLevel());
+    bgmOn = true; BGM.start();
+  }
+  function bgmTick() { if (bgmOn && cur) BGM.setLevel(bgmLevel()); }   // 제한시간이 줄어드는 동안 강도를 따라간다
+  function bgmDuck(on) {   // 문제·단어 음성이 나오는 동안 줄인다(끝 신호가 없으면 6초 뒤 복귀)
+    BGM.setDuck(on);
+    if (bgmDk) { clearTimeout(bgmDk); bgmDk = null; }
+    if (on) bgmDk = setTimeout(function () { bgmDk = null; BGM.setDuck(false); }, 6000);
+  }
+  function bgmPreview(v) {   // 설정에서 볼륨을 움직일 때 잠깐 평상 강도로 들려준다
+    var s = EJ.get("settings");
+    if (bgmOn || s.mute || s.bgm === false) return;
+    if (v <= 0) { BGM.stop(0.3); return; }
+    BGM.setListen(false); BGM.setDuck(false); BGM.setLevel(0); BGM.setVolume(v / 100 * 1.6); BGM.start();
+    if (bgmPv) clearTimeout(bgmPv);
+    bgmPv = setTimeout(function () { bgmPv = null; if (!bgmOn) BGM.stop(0.5); }, 1800);
   }
 
   // ===== 제한시간 (v0.42): 문제마다 시간 제한. 끄면(설정) 없음. 복습·Lv1~9는 제한 없음 =====
@@ -249,6 +284,7 @@
     if (tm.end - Date.now() <= 0) { drawLimit(); tm.done = true; stopIv(); onTimeout(); return; }
     drawLimit();
     tickSound();
+    bgmTick();
   }
   // 째깍 소리(v0.43): 초록 무소리, 주황 초당 1회, 빨강 초당 3→5회로 점점 빨라짐. 효과음·무음 설정은 sfx()가 따른다
   function tickSound() {
@@ -361,6 +397,7 @@
     $("g-say").textContent = "";
     $("g-next").style.display = "none";
     setupLimit();
+    bgmSync();   // 판 시작·다음 문제: 연속 정답 단계와 듣기 보호를 반영
     var isSpell = cur.mode === "spell", isSent = cur.mode === "sentence", isOrder = isSpell || isSent;
     $("g-erase").style.display = isOrder ? "" : "none";
     spell = isOrder ? { seq: [] } : null;
@@ -532,6 +569,7 @@
     $("g-score").textContent = String(cur.score);
     $("g-combo").textContent = String(cur.combo);
     fxChip();
+    bgmSync();   // 연속이 늘면 빨라지고, 오답·시간 초과로 끊기면 평상으로
     renderHp();
     var say = el("div", "say " + (r.correct ? "good" : "bad"));
     if (r.correct) {
@@ -618,6 +656,7 @@
     var left = EJ.reviewLeft(stage);
     var opened = EJ.tryUnlock(stage, requiredModes());   // 그 레벨 복습을 모두 마쳤고 모든 모드 A 이상이면 다음 레벨을 연다
     cur = null;
+    bgmSync();
     $("r-label").textContent = lvName(stage) + " · 틀린 단어 복습";
     var badge = $("r-badge"); badge.textContent = "✓"; badge.className = "badge pop";
     $("r-score").textContent = r.answered + "개 중 " + r.correct + "개 맞힘";
@@ -676,6 +715,7 @@
     var pending = !!(pendNext && after && !after.unlocked && xpNow.cur === xpNow.total && pendLeft > 0);
     var set = EJ.get("settings");
     cur = null;
+    bgmSync();
     if (set.result || r.over) {
       $("r-label").textContent = lab;
       $("r-l1").textContent = "정답"; $("r-l2").textContent = "최고 연속";   // 복습 팝업에서 바꾼 문구를 되돌린다
@@ -759,11 +799,12 @@
     if (name === "review") renderReview();
     if (name === "modes") renderModes();
     if (name === "settings") renderSettings();
+    bgmSync();   // 게임 화면에서만 재생, 다른 화면으로 가면 정지
     window.scrollTo(0, 0);
   }
 
   // 설정 화면: 저장된 값을 읽어 스위치·스타일을 표시한다(읽기만 하고 저장하지 않음)
-  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word", "sw-result": "result", "sw-timer": "timer" };
+  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word", "sw-result": "result", "sw-timer": "timer", "sw-bgm": "bgm" };
   function renderSettings() {
     var s = EJ.get("settings");
     function sw(id, on, dis) {
@@ -771,6 +812,9 @@
       b.setAttribute("aria-checked", on ? "true" : "false"); b.disabled = !!dis;
     }
     sw("sw-mute", s.mute, false); sw("sw-sfx", s.sfx, s.mute); sw("sw-word", s.word, s.mute); sw("sw-result", s.result, false); sw("sw-timer", s.timer !== false, false);
+    sw("sw-bgm", s.bgm !== false, s.mute);
+    var bo = s.mute || s.bgm === false, bv = s.bgmVol === undefined ? 100 : s.bgmVol, rg = $("bgm-vol");
+    rg.value = String(bv); rg.disabled = bo; rg.style.setProperty("--p", bv + "%"); $("bgm-vol-val").textContent = bv + "%"; $("bgm-vol-row").classList.toggle("off", bo);
     var nr = document.querySelectorAll("#next-box .so");
     for (var q = 0; q < nr.length; q++) {
       var non = nr[q].dataset.next === s.next;
@@ -917,8 +961,18 @@
     }
   });
 
+  // 배경음악 볼륨 슬라이더: 움직이는 동안 미리 듣기, 손을 떼면(변경 시) 한 번만 저장
+  (function () {
+    var rg = $("bgm-vol");
+    rg.addEventListener("input", function () { var v = +rg.value; rg.style.setProperty("--p", v + "%"); $("bgm-vol-val").textContent = v + "%"; bgmPreview(v); });
+    rg.addEventListener("change", function () { EJ.setSetting("bgmVol", +rg.value); });
+  })();
+
   window.addEventListener("resize", refit);
-  document.addEventListener("visibilitychange", function () { if (document.hidden) pauseLimit(); else if ($("exit-modal").style.display !== "grid") resumeLimit(); });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { pauseLimit(); bgmOn = false; BGM.stop(0.2); }   // 화면이 가려지면 음악도 멈춘다
+    else { if ($("exit-modal").style.display !== "grid") resumeLimit(); bgmSync(); }
+  });
 
   var h = (location.hash || "#home").slice(1);
   show(h === "modes" || h === "review" || h === "settings" ? h : h === "wordbook" ? "review" : "home");

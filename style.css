@@ -428,3 +428,18 @@ button.sw { padding: 0; cursor: pointer; }
   #game.edge10::after { animation: fxedge .8s ease-in-out infinite alternate; }
   .combo.c3, .combo.c5, .combo.c10 { animation: fxchip 1.2s ease-in-out infinite; transition: background-color .2s; }
 }
+
+/* v0.47 배경음악 볼륨 */
+.set .row.vol { display: block; }
+.set .vol .vt { display: flex; justify-content: space-between; align-items: baseline; }
+.set .vol .vt b { font-size: 16px; }
+.set .vol .vt em { font-style: normal; font-weight: 700; font-size: 15px; color: #3D8BFF; }
+.set .vol .vs { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.set .vol .vl { font-size: 12px; color: var(--sub); flex: none; }
+.set .vol .vh { display: block; font-size: 12px; color: var(--sub); margin-top: 6px; }
+#bgm-vol { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 16px; border-radius: 999px; border: 3px solid var(--ink); background: linear-gradient(to right, #3D8BFF var(--p, 100%), #fff var(--p, 100%)); margin: 0; }
+#bgm-vol::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 3px solid var(--ink); box-shadow: 0 2px 0 var(--ink); cursor: pointer; }
+#bgm-vol::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 3px solid var(--ink); cursor: pointer; }
+#bgm-vol:focus-visible { outline: 4px solid var(--yellow); outline-offset: 4px; }
+.set .row.vol.off { opacity: .45; }
+.set .row.vol.off #bgm-vol { cursor: default; }
