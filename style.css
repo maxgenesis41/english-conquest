@@ -344,7 +344,7 @@ button.sw { padding: 0; cursor: pointer; }
 .mode .mg.none { background: #EEF3FA; color: var(--gray); border-color: var(--gray); }
 .mprog { margin: 0 0 14px; font-size: 14px; font-weight: 700; color: var(--sub); }
 
-/* v0.38: 홈 레벨 대역(접기·펼치기), 현재 레벨 "지금", 잠긴 카드(설명 없음) */
+/* v0.38: 홈 레벨 등급(접기·펼치기), 현재 레벨 "지금", 잠긴 카드(설명 없음) */
 .band { display: flex; align-items: center; gap: 10px; width: 100%; height: 52px; padding: 0 14px 0 24px; margin: 2px 0 12px; border: 3px solid var(--ink); border-radius: 16px; background: #fff; box-shadow: inset 10px 0 0 var(--c), 0 4px 0 var(--ink); text-align: left; }
 .band:active { transform: translateY(3px); box-shadow: inset 10px 0 0 var(--c), 0 1px 0 var(--ink); }
 .band .bn { font-size: 17px; font-weight: 700; flex: none; }
@@ -359,7 +359,7 @@ button.sw { padding: 0; cursor: pointer; }
 .stage.locked .name { font-size: 16px; }
 .stage.locked:active { transform: none; box-shadow: 0 5px 0 #8C9AB8; }
 
-/* v0.38 대역 막대: 2줄(이름+영어 / 레벨 범위·열림 수) */
+/* v0.38 등급 막대: 2줄(이름+영어 / 레벨 범위·열림 수) */
 .band { height: 60px; }
 .band .bt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .band .bl1 { display: flex; align-items: baseline; gap: 6px; }
@@ -367,7 +367,7 @@ button.sw { padding: 0; cursor: pointer; }
 .band .bl2 { font-size: 12px; color: var(--sub); }
 .band .chev { margin-left: auto; }
 
-/* v0.38 다음 대역 잠긴 막대 */
+/* v0.38 다음 등급 잠긴 막대 */
 .band.locked { background: #E4EBF5; border-color: #8C9AB8; box-shadow: inset 10px 0 0 var(--gray), 0 4px 0 #8C9AB8; }
 .band.locked:active { transform: none; box-shadow: inset 10px 0 0 var(--gray), 0 4px 0 #8C9AB8; }
 .band.locked .bn { color: #7C8AA8; }
@@ -443,3 +443,8 @@ button.sw { padding: 0; cursor: pointer; }
 #bgm-vol:focus-visible { outline: 4px solid var(--yellow); outline-offset: 4px; }
 .set .row.vol.off { opacity: .45; }
 .set .row.vol.off #bgm-vol { cursor: default; }
+
+/* v0.48 BETA-TEST 등급 선택 (임시, 개발 완료 후 삭제) */
+.betatag { font-size: 11px; font-weight: 700; color: #fff; background: #E5484D; border-radius: 999px; padding: 1px 8px; vertical-align: 2px; margin-left: 4px; }
+#beta-band { width: 100%; margin-top: 8px; padding: 10px 12px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: #fff; border: 3px solid var(--ink); border-radius: 12px; }
+.betabadge { align-self: center; margin: 8px 0 0; padding: 3px 12px; border-radius: 999px; background: #FFF3C4; border: 2px solid #E0A100; color: #6B4E00; font-size: 12px; font-weight: 700; }

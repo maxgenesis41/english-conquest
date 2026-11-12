@@ -16,6 +16,7 @@ var EJ = (function () {
   var LV_COUNT = 99;     // 레벨 수(전체 Lv 1개 체계)
   var STYLES = ["retro", "bright", "chime"]; // 효과음 스타일: 레트로 8비트 / 밝은 게임풍 / 부드러운 차임
   var NEXTS = ["order", "same"];
+  var BETA_IDS = ["c", "b", "t", "f", "w", "e", "m", "g", "p", "l"];   // BETA-TEST 임시: app.js 등급 id와 같다
 
   var memory = {};   // 저장이 막혔을 때만 쓰는 임시 보관(새로고침하면 사라짐)
   var blocked = false;
@@ -31,7 +32,7 @@ var EJ = (function () {
       return { v: FORMATS.progress, lvs: lvs, modes: {} };
     }
     if (name === "wordbook" || name === "review") return { v: FORMATS[name], items: [] };
-    return { v: FORMATS.settings, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, timer: true, next: "order", bgm: true, bgmVol: 100 };
+    return { v: FORMATS.settings, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, timer: true, next: "order", bgm: true, bgmVol: 100, betaBand: "" };   // betaBand: BETA-TEST 임시(개발 완료 후 삭제) 시험할 등급 id, ""=끔
   }
 
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
@@ -80,6 +81,7 @@ var EJ = (function () {
     if (o.timer !== undefined && typeof o.timer !== "boolean") return false;
     if (o.bgm !== undefined && typeof o.bgm !== "boolean") return false;   // v0.47 배경음악 켜짐
     if (o.bgmVol !== undefined && (typeof o.bgmVol !== "number" || o.bgmVol < 0 || o.bgmVol > 100 || o.bgmVol % 1 !== 0)) return false;   // 배경음악 볼륨 0~100(%)
+    if (o.betaBand !== undefined && (typeof o.betaBand !== "string" || (o.betaBand !== "" && BETA_IDS.indexOf(o.betaBand) < 0))) return false;   // BETA-TEST
     if (o.next !== undefined && NEXTS.indexOf(o.next) < 0) return false;
     if (o.style !== undefined && STYLES.indexOf(o.style) < 0) return false;
     return true;
@@ -269,6 +271,7 @@ var EJ = (function () {
     if (key === "style") { if (STYLES.indexOf(value) < 0) return false; }
     else if (key === "next") { if (NEXTS.indexOf(value) < 0) return false; }
     else if (key === "mute" || key === "sfx" || key === "word" || key === "result" || key === "timer" || key === "bgm") { if (typeof value !== "boolean") return false; }
+    else if (key === "betaBand") { if (typeof value !== "string" || (value !== "" && BETA_IDS.indexOf(value) < 0)) return false; }   // BETA-TEST
     else if (key === "bgmVol") { if (typeof value !== "number" || value < 0 || value > 100 || value % 1 !== 0) return false; }
     else return false;
     var st = get("settings");

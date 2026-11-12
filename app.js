@@ -7,7 +7,7 @@
   var LV_COUNT = EJ.LV_COUNT;
 
   function lvName(n) { return "레벨 " + n; }
-  // v0.38: 레벨 10개 대역(캐릭터 성장 단계 이름, 10단위 경계). 카드 색은 대역 색을 따른다. 99 달성 뒤의 "신화"(환생)는 대역이 아니라 나중에 만들 상태다
+  // v0.38: 레벨 10개 등급(캐릭터 성장 단계 이름, 10단위 경계). 카드 색은 등급 색을 따른다. 99 달성 뒤의 "신화"(환생)는 등급이 아니라 나중에 만들 상태다
   var BANDS = [
     { id: "c", name: "평민", en: "Civilian", from: 1, to: 9, c: "#A98467" },
     { id: "b", name: "입문자", en: "Beginner", from: 10, to: 19, c: "var(--green)" },
@@ -22,7 +22,7 @@
   ];
   function bandOf(n) { for (var i = 0; i < BANDS.length; i++) if (n >= BANDS[i].from && n <= BANDS[i].to) return BANDS[i]; return BANDS[BANDS.length - 1]; }
   function lvColor(n) { return bandOf(n).c; }
-  var openBands = {};   // 사용자가 접거나 펼친 대역(저장하지 않음). 정하지 않은 대역은 현재 레벨이 있는 대역만 펼친다
+  var openBands = {};   // 사용자가 접거나 펼친 등급(저장하지 않음). 정하지 않은 등급은 현재 레벨이 있는 등급만 펼친다
   function openedMsg(n) { return "새 레벨이 열렸어요! (" + lvName(n) + ")"; }   // 숫자 뒤 조사(이/가)를 피하려고 괄호로 쓴다
 
   // v0.39: 다음 레벨을 열려면 경험치 칸을 모두 채우고(모드 1판 A 이상 = 1칸, 모드당 R=올림(√레벨)칸) 틀린 단어 0개. 듣기는 영어 음성이 없는 기기에서 제외
@@ -35,9 +35,19 @@
   // 가장 높게 열린 레벨(현재 레벨)
   function frontierLv() {
     var p = EJ.get("progress"), f = 1;
-    for (var n = 1; n <= LV_COUNT; n++) if (p.lvs[String(n)].unlocked) f = n;
+    for (var n = 1; n <= LV_COUNT; n++) if (lvOpen(p, n)) f = n;
     return f;
   }
+
+  // BETA-TEST (임시, 개발 완료 후 삭제): 설정의 "시험할 등급" 첫 레벨까지 화면에서만 열린 것으로 취급한다. 진행 기록은 바꾸지 않는다
+  function betaStart() {
+    var id = EJ.get("settings").betaBand;
+    if (!id) return 0;
+    for (var i = 0; i < BANDS.length; i++) if (BANDS[i].id === id) return BANDS[i].from;
+    return 0;
+  }
+  var betaFrom = 0;   // BETA-TEST: 홈을 그릴 때 한 번 읽는다
+  function lvOpen(p, n) { return p.lvs[String(n)].unlocked || n <= betaFrom; }   // BETA-TEST: 열림 판정(진행 기록 또는 베타)
 
   // 잠긴 레벨 카드를 눌렀을 때 안내(현재 레벨 기준: 거기서부터 차례대로 열린다)
   function lockMsg() {
@@ -46,13 +56,14 @@
     else showToast(lvName(f) + " 경험치를 모두 채워야 해요", "경험치 " + x.cur + "/" + x.total + " (모드마다 A 이상 " + x.per + "회)");
   }
 
-  // 홈: 현재 레벨 주변만 표시 — 이전 대역은 접힌 막대(눌러 펼침), 현재 대역은 열린 레벨 + 다음 레벨 1개, 다음 대역은 잠긴 막대 1개(현재 대역의 마지막 레벨이면 그 대역의 첫 레벨 1개도), 그 뒤 대역은 숨김. keepScroll이면 현재 레벨로 스크롤하지 않는다
+  // 홈: 현재 레벨 주변만 표시 — 이전 등급은 접힌 막대(눌러 펼침), 현재 등급은 열린 레벨 + 다음 레벨 1개, 다음 등급은 잠긴 막대 1개(현재 등급의 마지막 레벨이면 그 등급의 첫 레벨 1개도), 그 뒤 등급은 숨김. keepScroll이면 현재 레벨로 스크롤하지 않는다
   function renderHome(keepScroll) {
+    betaFrom = betaStart();   // BETA-TEST
     var p = EJ.get("progress"), req = requiredModes(), f = frontierLv(), curB = bandOf(f), html = "", n;
     var curIdx = BANDS.indexOf(curB);
     function card(n) {
       var st = p.lvs[String(n)];
-      if (st.unlocked) {
+      if (lvOpen(p, n)) {   // BETA-TEST: 원래는 st.unlocked
         return '<button class="chunk stage' + (n === f ? " now" : "") + '" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
           '<span class="tile pop">' + n + '</span>' +
           '<span class="txt"><div class="name">' + lvName(n) + (n === f ? '<span class="nowchip">지금</span>' : "") + '</div><div class="meta">' + (st.best ? "경험치 " + EJ.xp(n, req).cur + "/" + EJ.xp(n, req).total : "기록 없음") + '</div></span>' +
@@ -65,23 +76,25 @@
     }
     for (var bi = 0; bi <= curIdx + 1 && bi < BANDS.length; bi++) {
       var b = BANDS[bi], cnt = 0, total = b.to - b.from + 1;
-      for (n = b.from; n <= b.to; n++) if (p.lvs[String(n)].unlocked) cnt++;
+      for (n = b.from; n <= b.to; n++) if (lvOpen(p, n)) cnt++;   // BETA-TEST: 원래는 p.lvs[..].unlocked
       var title = '<span class="bt"><span class="bl1"><span class="bn">' + b.name + '</span><span class="be">' + b.en + '</span></span>';
-      if (bi === curIdx + 1) {   // 다음 대역: 잠긴 막대
+      if (bi === curIdx + 1) {   // 다음 등급: 잠긴 막대
         html += '<button class="band locked" data-lock="' + b.from + '" aria-disabled="true" style="--c:' + b.c + '">' + title +
           '<span class="bl2">레벨 ' + b.from + '~' + b.to + ' · 잠김</span></span><svg class="ic lock"><use href="#i-lock"/></svg></button>';
-        if (f === curB.to) html += card(b.from);   // 현재 대역을 다 열었으면 다음 레벨(다음 대역의 첫 레벨)을 보여 준다
+        if (f === curB.to) html += card(b.from);   // 현재 등급을 다 열었으면 다음 레벨(다음 등급의 첫 레벨)을 보여 준다
         continue;
       }
       var isOpen = openBands[b.id] === undefined ? bi === curIdx : openBands[b.id];
       html += '<button class="band' + (isOpen ? " open" : "") + '" data-band="' + b.id + '" aria-expanded="' + isOpen + '" style="--c:' + b.c + '">' + title +
         '<span class="bl2">레벨 ' + b.from + '~' + b.to + ' · 열림 ' + cnt + '/' + total + '</span></span><svg class="ic chev"><use href="#i-back"/></svg></button>';
       if (!isOpen) continue;
-      var last = bi === curIdx ? Math.min(b.to, f + 1) : b.to;   // 현재 대역은 열린 레벨 + 다음 레벨 1개까지
+      var last = bi === curIdx ? Math.min(b.to, f + 1) : b.to;   // 현재 등급은 열린 레벨 + 다음 레벨 1개까지
       for (n = b.from; n <= last; n++) html += card(n);
     }
     var list = document.getElementById("stage-list");
     list.innerHTML = html;
+    var bb = document.getElementById("beta-badge");   // BETA-TEST
+    if (bb) { bb.style.display = betaFrom ? "" : "none"; bb.textContent = betaFrom ? "🧪 베타: " + bandOf(betaFrom).name + "(레벨 " + betaFrom + "~) 열림" : ""; }
     var rvN = EJ.get("review").items.length;
     document.getElementById("rv-count").textContent = String(rvN);
     document.getElementById("rv-guide").style.display = rvN > 0 ? "" : "none";
@@ -815,6 +828,7 @@
     sw("sw-bgm", s.bgm !== false, s.mute);
     var bo = s.mute || s.bgm === false, bv = s.bgmVol === undefined ? 100 : s.bgmVol, rg = $("bgm-vol");
     rg.value = String(bv); rg.disabled = bo; rg.style.setProperty("--p", bv + "%"); $("bgm-vol-val").textContent = bv + "%"; $("bgm-vol-row").classList.toggle("off", bo);
+    $("beta-band").value = s.betaBand || "";   // BETA-TEST
     var nr = document.querySelectorAll("#next-box .so");
     for (var q = 0; q < nr.length; q++) {
       var non = nr[q].dataset.next === s.next;
@@ -890,7 +904,7 @@
     if (cb && !cb.disabled && !(cb.parentNode && cb.parentNode.id === "g-opts" && !spell) && cb.id !== "g-spk" &&
         !(cb.id === "g-next" && cb.textContent === "결과 보기")) sfx("click");
     var bd = t.closest("[data-band]");
-    if (bd) {   // 대역 접기·펼치기(저장하지 않음)
+    if (bd) {   // 등급 접기·펼치기(저장하지 않음)
       var bid = bd.dataset.band;
       openBands[bid] = !bd.classList.contains("open");
       renderHome(true);
@@ -967,6 +981,8 @@
     rg.addEventListener("input", function () { var v = +rg.value; rg.style.setProperty("--p", v + "%"); $("bgm-vol-val").textContent = v + "%"; bgmPreview(v); });
     rg.addEventListener("change", function () { EJ.setSetting("bgmVol", +rg.value); });
   })();
+
+  $("beta-band").addEventListener("change", function () { EJ.setSetting("betaBand", $("beta-band").value); });   // BETA-TEST
 
   window.addEventListener("resize", refit);
   document.addEventListener("visibilitychange", function () {
