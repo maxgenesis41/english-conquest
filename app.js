@@ -3,37 +3,45 @@
 (function () {
   "use strict";
 
-  var STAGES = [
-    { n: 1, name: "입문", cefr: "A1", color: "var(--green)" },
-    { n: 2, name: "초급", cefr: "A2", color: "var(--blue)" },
-    { n: 3, name: "초중급", cefr: "B1", color: "var(--orange)" },
-    { n: 4, name: "중급 (인터미디어)", cefr: "B2", color: "var(--pink)" }
-  ];
+  var ALLW = WORDS.concat(typeof WORDS_ADV !== "undefined" ? WORDS_ADV : []);   // 일반 단어(CEFR-J) + 고급 단어(Octanove, Lv91~99)
+  var LV_COUNT = EJ.LV_COUNT;
 
-  // 잠긴 단계 카드 안내(①): 앞 단계가 B 이상이면 남은 복습 수, 아니면 필요한 조건
-  function needText(i) {
-    var pv = STAGES[i - 1], left = EJ.reviewLeft(pv.n);
-    if (EJ.gradeAtLeast(EJ.get("progress").stages[String(pv.n)].best, "B") && left > 0) return "틀린 단어 복습 " + left + "개 남음";   // B는 달성, 복습만 남은 경우(사실과 맞게)
-    return pv.name + " B등급 필요";
+  function lvName(n) { return "레벨 " + n; }
+  // 카드 색: 옛 4단계 범위(입문·초급·초중급·중급)를 그대로 따른다(대역 이름·경계는 v0.37 시안에서 정한다)
+  function lvColor(n) { return n <= 17 ? "var(--green)" : n <= 32 ? "var(--blue)" : n <= 66 ? "var(--orange)" : "var(--pink)"; }
+  function openedMsg(n) { return "새 레벨이 열렸어요! (" + lvName(n) + ")"; }   // 숫자 뒤 조사(이/가)를 피하려고 괄호로 쓴다
+
+  // v0.37: 다음 레벨을 열려면 필수 모드 모두 A 이상(듣기는 영어 음성이 없는 기기에서 제외) + 틀린 단어 0개
+  function requiredModes() {
+    var out = [];
+    for (var i = 0; i < MODE_ORDER.length; i++) if (MODE_ORDER[i] !== "listen" || Sound.ok()) out.push(MODE_ORDER[i]);
+    return out;
   }
 
-  // 홈: 단계 카드(열림/잠김, 최고 등급)와 틀린 단어 개수
+  // 잠긴 레벨 카드 안내: 모드를 다 채웠고 복습만 남았으면 남은 복습 수, 아니면 모드 달성 수
+  function needText(n) {
+    var pv = n - 1, req = requiredModes(), c = EJ.modesCleared(pv, req), left = EJ.reviewLeft(pv);
+    if (c === req.length && left > 0) return "틀린 단어 복습 " + left + "개 남음";
+    return lvName(pv) + " 모든 모드 A 이상 (" + c + "/" + req.length + ")";
+  }
+
+  // 홈: 열린 레벨 카드(최고 등급)와 다음 잠긴 레벨 1개, 틀린 단어 개수(v0.37에서 레벨 선택 화면으로 개선 예정)
   function renderHome() {
     var p = EJ.get("progress");
     var html = "";
-    for (var i = 0; i < STAGES.length; i++) {
-      var s = STAGES[i];
-      var st = p.stages[String(s.n)];
+    for (var n = 1; n <= LV_COUNT; n++) {
+      var st = p.lvs[String(n)];
       if (st.unlocked) {
-        html += '<button class="chunk stage" data-go="modes" data-n="' + s.n + '" data-stage="' + s.name + '" style="--c:' + s.color + '">' +
-          '<span class="tile pop">' + s.cefr + '</span>' +
-          '<span class="txt"><div class="name">' + s.name + '</div><div class="meta">' + (st.best ? "최고 등급 " + st.best : "기록 없음") + '</div></span>' +
+        html += '<button class="chunk stage" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
+          '<span class="tile pop">' + n + '</span>' +
+          '<span class="txt"><div class="name">' + lvName(n) + '</div><div class="meta">' + (st.best ? "모드 " + EJ.modesCleared(n, requiredModes()) + "/" + requiredModes().length + " 달성" : "기록 없음") + '</div></span>' +
           '<span class="grade' + (st.best ? "" : " none") + '">' + (st.best ? st.best : "-") + '</span></button>';
       } else {
         html += '<button class="chunk stage locked" disabled>' +
-          '<span class="tile pop">' + s.cefr + '</span>' +
-          '<span class="txt"><div class="name">' + s.name + '</div><div class="meta">' + needText(i) + '</div></span>' +
+          '<span class="tile pop">' + n + '</span>' +
+          '<span class="txt"><div class="name">' + lvName(n) + '</div><div class="meta">' + needText(n) + '</div></span>' +
           '<svg class="ic lock"><use href="#i-lock"/></svg></button>';
+        break;   // 열림은 순서대로라 다음 잠긴 카드 1개만 보여 준다
       }
     }
     document.getElementById("stage-list").innerHTML = html;
@@ -42,14 +50,13 @@
     document.getElementById("rv-guide").style.display = rvN > 0 ? "" : "none";
   }
 
-  function shortName(n) { return STAGES[n - 1].name.split(" ")[0]; }   // "중급 (인터미디어)" → "중급" (문장 안에서 조사가 어색하지 않게)
-
+  var WMAP = null;
   function wordById(id) {
-    for (var i = 0; i < WORDS.length; i++) if (WORDS[i].id === id) return WORDS[i];
-    return null;
+    if (!WMAP) { WMAP = {}; for (var i = 0; i < ALLW.length; i++) WMAP[ALLW[i].id] = ALLW[i]; }
+    return WMAP[id] || null;
   }
 
-  // 틀린 단어 복습: 틀린 단어를 단계별로 묶어(오래된 순) 보여 준다. 없으면 빈 상태 화면
+  // 틀린 단어 복습: 틀린 단어를 레벨별로 묶어(오래된 순) 보여 준다. 없으면 빈 상태 화면
   function renderReview() {
     var items = EJ.get("review").items;
     var list = document.getElementById("rv-list");
@@ -57,13 +64,13 @@
     document.getElementById("rv-full").style.display = items.length ? "block" : "none";
     document.getElementById("rv-empty").style.display = items.length ? "none" : "block";
     document.getElementById("rv-sum").textContent = "틀린 단어 " + items.length + "개";
-    var prog = EJ.get("progress"), lockedNext = false;
-    for (var n = 1; n <= STAGES.length; n++) {
-      var its = [], i;
-      for (i = 0; i < items.length; i++) if (items[i].level === n) its.push(items[i]);
-      if (!its.length) continue;
+    var by = {}, i;
+    for (i = 0; i < items.length; i++) (by[items[i].lv] = by[items[i].lv] || []).push(items[i]);
+    for (var n = 1; n <= LV_COUNT; n++) {
+      var its = by[n];
+      if (!its) continue;
       var head = document.createElement("div"); head.className = "rgrp";
-      var tt = document.createElement("b"); tt.textContent = STAGES[n - 1].name + " · " + its.length + "개";
+      var tt = document.createElement("b"); tt.textContent = lvName(n) + " · " + its.length + "개";
       var bt = document.createElement("button"); bt.className = "btn"; bt.textContent = "복습 시작"; bt.dataset.review = String(n);
       head.appendChild(tt); head.appendChild(bt);
       list.appendChild(head);
@@ -87,8 +94,8 @@
   function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
 
   function wordsOfStage(n, mode) {
-    var src = mode === "sentence" ? SENTENCES : WORDS, out = [];
-    for (var i = 0; i < src.length; i++) if (src[i].level === n) out.push(src[i]);
+    var src = mode === "sentence" ? SENTENCES : ALLW, out = [];
+    for (var i = 0; i < src.length; i++) if (src[i].lv === n) out.push(src[i]);
     return out;
   }
 
@@ -145,6 +152,35 @@
   var MODE_NAMES = { letter: "글자 맞추기", meaning: "뜻 맞추기", spell: "철자 쓰기", sentence: "문장 배열", listen: "듣기" };
   function items(q) { return q.letters || q.pool; }   // 순서 모드의 섞인 조각(글자 또는 단어)
 
+  // 글자 칸(글자 맞추기 tiles·철자 쓰기 slots): 한 줄에 다 안 들어가면 같은 개수씩 여러 줄로 나눈다(13~14글자 단어가 칸 밖으로 넘치지 않게)
+  var CELL_MIN = { "": 32, sm: 30, xs: 26 };   // 크기별 한 칸의 최소 너비(px)
+  function layoutCells(box) {
+    var n = +box.dataset.n, size = box.dataset.size || "";
+    var gap = parseFloat(getComputedStyle(box).columnGap) || 6;
+    var per = Math.max(1, Math.floor((box.clientWidth + gap) / (CELL_MIN[size] + gap)));
+    var rows = Math.ceil(n / per);
+    box.style.setProperty("--cols", String(Math.ceil(n / rows)));
+  }
+  // 듣기 보기(영어 단어): 가장 긴 단어가 보기 안에 들어갈 때까지 글자 크기를 모두 같이 줄인다
+  function fitListen() {
+    var bs = $("g-opts").querySelectorAll(".opt.en"), i;
+    if (!bs.length) return;
+    for (i = 0; i < bs.length; i++) bs[i].style.fontSize = "";
+    var fs = parseFloat(getComputedStyle(bs[0]).fontSize);
+    function over() { for (var k = 0; k < bs.length; k++) if (bs[k].scrollWidth > bs[k].clientWidth) return true; return false; }
+    while (fs > 12 && over()) {
+      fs -= 1;
+      for (i = 0; i < bs.length; i++) bs[i].style.fontSize = fs + "px";
+    }
+  }
+  function refit() {   // 화면 폭이 바뀌면(기기 회전 등) 다시 맞춘다
+    if (!cur || !$("game").classList.contains("on")) return;
+    var tl = $("g-tiles"), sl = $("g-slots");
+    if (tl) layoutCells(tl);
+    if (sl) layoutCells(sl);
+    if (cur.mode === "listen") fitListen();
+  }
+
   function renderQuestion() {
     var q = Game.current(cur);
     renderHp();
@@ -167,19 +203,23 @@
       card.appendChild(el("div", "sub", "빈칸에 들어갈 글자는?"));
       var ko = el("div", "ko", q.ko); ko.style.cssText = "font-size:26px;font-weight:700;margin:8px 0 14px";
       card.appendChild(ko);
-      var t = el("div", "tiles" + (q.en.length > 12 ? " xs" : q.en.length > 8 ? " sm" : ""));
-      t.id = "g-tiles";
+      var tsz = q.en.length > 12 ? "xs" : q.en.length > 8 ? "sm" : "";
+      var t = el("div", "tiles" + (tsz ? " " + tsz : ""));
+      t.id = "g-tiles"; t.dataset.n = String(q.en.length); t.dataset.size = tsz;
       for (var i = 0; i < q.en.length; i++) t.appendChild(el("span", i === q.blank ? "blank" : "", i === q.blank ? "?" : q.en.charAt(i)));
       card.appendChild(t);
+      layoutCells(t);
     } else if (isSpell) {
       card.appendChild(el("div", "sub", "뜻에 맞게 글자를 눌러 주세요"));
       var ko2 = el("div", "ko", q.ko); ko2.style.cssText = "font-size:26px;font-weight:700;margin:8px 0 14px";
       card.appendChild(ko2);
       var n = q.letters.length;
-      var sl = el("div", "slots" + (n > 12 ? " xs" : n > 8 ? " sm" : ""));
-      sl.id = "g-slots"; sl.style.setProperty("--n", String(n));
+      var ssz = n > 12 ? "xs" : n > 8 ? "sm" : "";
+      var sl = el("div", "slots" + (ssz ? " " + ssz : ""));
+      sl.id = "g-slots"; sl.style.setProperty("--n", String(n)); sl.dataset.n = String(n); sl.dataset.size = ssz;
       for (var j = 0; j < n; j++) sl.appendChild(el("span", "sl0"));
       card.appendChild(sl);
+      layoutCells(sl);
       box.className = "pool" + (n > 8 ? " sm" : "");
       renderSpell();
     } else if (isSent) {
@@ -209,7 +249,7 @@
     }
     var first = box.querySelector(".opt");
     if (first) first.focus();
-    if (cur.mode === "listen") setTimeout(speakCurrent, 250);   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
+    if (cur.mode === "listen") { fitListen(); setTimeout(speakCurrent, 250); }   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
   }
 
   // 철자 쓰기: 칸과 타일을 현재 입력(spell.seq)에 맞게 다시 그린다
@@ -290,7 +330,7 @@
     lastStage = stage; lastMode = mode; lastReview = false;
     $("game").classList.remove("review");
     if (mode === "listen" && !Sound.ok()) return false;
-    var g = Game.start({ stage: stage, mode: mode, words: wordsOfStage(stage, mode) });
+    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode) });
     if (!g) return false;
     cur = g;
     show("game");
@@ -298,18 +338,18 @@
     return true;
   }
 
-  // 틀린 단어 복습 시작: 그 단계의 틀린 단어를 오래된 순으로 최대 10개, 뜻 맞추기 방식(체력·점수·힌트 없음)
+  // 틀린 단어 복습 시작: 그 레벨의 틀린 단어를 오래된 순으로 최대 10개, 뜻 맞추기 방식(체력·점수·힌트 없음)
   function startReview(stage) {
     clearTimer();
     var its = EJ.get("review").items, ws = [], i;
-    for (i = 0; i < its.length; i++) if (its[i].level === stage) { var w = wordById(its[i].id); if (w) ws.push(w); }
+    for (i = 0; i < its.length; i++) if (its[i].lv === stage) { var w = wordById(its[i].id); if (w) ws.push(w); }
     if (!ws.length) return false;
-    var g = Game.start({ stage: stage, mode: "meaning", words: ws, pool: wordsOfStage(stage, "meaning"), total: Math.min(10, ws.length), review: true, ordered: true });
+    var g = Game.start({ lv: stage, mode: "meaning", words: ws, pool: wordsOfStage(stage, "meaning"), total: Math.min(10, ws.length), review: true, ordered: true });
     if (!g) return false;
     lastStage = stage; lastMode = "meaning"; lastReview = true;
     cur = g;
     $("game").classList.add("review");
-    $("g-rtag").textContent = "틀린 단어 복습 · " + STAGES[stage - 1].name;
+    $("g-rtag").textContent = "틀린 단어 복습 · " + lvName(stage);
     show("game");
     renderQuestion();
     return true;
@@ -397,26 +437,24 @@
     hb.disabled = true;
   }
 
-  // 복습이 끝날 때 한 번만 저장: 맞힌 단어를 틀린 단어 목록에서 뺀다(틀린 단어는 그대로 남는다). 단계 등급·점수는 기록하지 않는다
+  // 복습이 끝날 때 한 번만 저장: 맞힌 단어를 틀린 단어 목록에서 뺀다(틀린 단어는 그대로 남는다). 레벨 등급·점수는 기록하지 않는다
   function finishReview() {
     clearTimer();
     Sound.stop();
     var r = Game.result(cur), stage = lastStage, i;
     EJ.removeWrongs(r.correctIds);
     var left = EJ.reviewLeft(stage);
-    var opened = EJ.tryUnlock(stage);   // 그 단계 복습을 모두 마쳤고 B 이상이면 다음 단계를 연다
-    var nxt = EJ.get("progress").stages[String(stage + 1)], nextLocked = !!(nxt && !nxt.unlocked);
-    var bestOk = EJ.gradeAtLeast(EJ.get("progress").stages[String(stage)].best, "B");
+    var opened = EJ.tryUnlock(stage, requiredModes());   // 그 레벨 복습을 모두 마쳤고 모든 모드 A 이상이면 다음 레벨을 연다
     cur = null;
-    $("r-label").textContent = STAGES[stage - 1].name + " · 틀린 단어 복습";
+    $("r-label").textContent = lvName(stage) + " · 틀린 단어 복습";
     var badge = $("r-badge"); badge.textContent = "✓"; badge.className = "badge pop";
     $("r-score").textContent = r.answered + "개 중 " + r.correct + "개 맞힘";
     $("r-l1").textContent = "맞힘"; $("r-correct2").textContent = String(r.correct);
     $("r-l2").textContent = "다시 틀림"; $("r-combo").textContent = String(r.answered - r.correct);
     $("r-new-l").textContent = "남은 단어"; $("r-new").textContent = String(left);
     var ban = $("r-banner"); ban.textContent = "";
-    if (opened) ban.appendChild(el("div", "banner up", shortName(stage + 1) + "이 열렸어요!"));
-    else if (!left) ban.appendChild(el("div", "banner up", STAGES[stage - 1].name + " 복습을 모두 마쳤어요!"));
+    if (opened) ban.appendChild(el("div", "banner up", openedMsg(stage + 1)));
+    else if (!left) ban.appendChild(el("div", "banner up", lvName(stage) + " 복습을 모두 마쳤어요!"));
     else if (r.correct) ban.appendChild(el("div", "banner up", "맞힌 " + r.correct + "개는 목록에서 빠졌어요!"));
     var nb = $("r-next"), ag = $("r-again");
     nb.dataset.act = "";
@@ -435,30 +473,23 @@
     clearTimer();
     Sound.stop();
     var r = Game.result(cur);
-    var before = EJ.get("progress").stages[String(lastStage + 1)];
+    var before = EJ.get("progress").lvs[String(lastStage + 1)];
     var wasUnlocked = !!(before && before.unlocked);
-    var wb = EJ.get("wordbook").items, have = {}, newCount = 0, i;
-    for (i = 0; i < wb.length; i++) have[wb[i].id] = true;
+    var i;
     if (lastMode !== "sentence" && r.wrongIds.length) {   // 틀린 단어 기록(문장 제외, 한 판에 한 번 저장)
-      var lv = {}, wl = [];
-      for (i = 0; i < WORDS.length; i++) lv[WORDS[i].id] = WORDS[i].level;
-      for (i = 0; i < r.wrongIds.length; i++) if (lv[r.wrongIds[i]]) wl.push({ id: r.wrongIds[i], level: lv[r.wrongIds[i]] });
+      var wl = [];
+      for (i = 0; i < r.wrongIds.length; i++) { var ww = wordById(r.wrongIds[i]); if (ww) wl.push({ id: ww.id, lv: ww.lv }); }
       EJ.addWrongs(wl);
     }
-    EJ.recordResult(lastStage, lastMode, r.grade, r.score);   // 틀린 단어를 먼저 기록해야 단계 열림 조건(복습 0개)이 맞다
-    if (lastMode !== "sentence") {   // 문장은 단어장에 넣지 않는다
-      for (i = 0; i < r.correctIds.length; i++) {
-        if (!have[r.correctIds[i]]) { have[r.correctIds[i]] = true; newCount++; }
-        EJ.addWord(r.correctIds[i]);
-      }
-    }
-    var after = EJ.get("progress").stages[String(lastStage + 1)];
+    EJ.recordResult(lastStage, lastMode, r.grade, r.score, requiredModes());   // 틀린 단어를 먼저 기록해야 레벨 열림 조건(복습 0개)이 맞다
+    var after = EJ.get("progress").lvs[String(lastStage + 1)];
     var newlyUnlocked = !!(after && after.unlocked && !wasUnlocked);
-    var lab = STAGES[lastStage - 1].name + " · " + MODE_NAMES[lastMode];
-    var unlockMsg = newlyUnlocked ? STAGES[lastStage].name + "이 열렸어요!" : "";
-    // ③ B 이상을 받았어도 복습이 남아 다음 단계가 잠겨 있는 경우
-    var pendLeft = EJ.reviewLeft(lastStage), pendNext = STAGES[lastStage];
-    var pending = !!(pendNext && after && !after.unlocked && EJ.gradeAtLeast(EJ.get("progress").stages[String(lastStage)].best, "B") && pendLeft > 0);
+    var lab = lvName(lastStage) + " · " + MODE_NAMES[lastMode];
+    var unlockMsg = newlyUnlocked ? openedMsg(lastStage + 1) : "";
+    // 모든 모드 A 이상을 채웠어도 복습이 남아 다음 레벨이 잠겨 있는 경우
+    var req = requiredModes(), cleared = EJ.modesCleared(lastStage, req);
+    var pendLeft = EJ.reviewLeft(lastStage), pendNext = lastStage < LV_COUNT;
+    var pending = !!(pendNext && after && !after.unlocked && cleared === req.length && pendLeft > 0);
     var set = EJ.get("settings");
     cur = null;
     if (set.result || r.over) {
@@ -476,11 +507,12 @@
       $("r-score").textContent = r.score + "점";
       $("r-correct2").textContent = r.correct + " / " + r.answered;
       $("r-combo").textContent = String(r.bestCombo);
-      $("r-new-l").textContent = lastMode === "sentence" ? "힌트 사용" : "새 단어";
-      $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : newCount);
+      $("r-new-l").textContent = lastMode === "sentence" ? "힌트 사용" : "틀린 단어";
+      $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : r.wrongIds.length);
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
       if (unlockMsg) ban.appendChild(el("div", "banner up", unlockMsg));
+      else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", "모드 달성! (" + cleared + "/" + req.length + ")"));
       var nm = pickNext(set.next);
       var nb = $("r-next"), ag = $("r-again");
       var twoBtn = !(set.next === "order" && nm && nm !== lastMode);
@@ -493,7 +525,7 @@
       nb.dataset.act = "";
       if (pending) {   // 첫 버튼을 "복습하기"로(다시·모드 버튼은 그대로)
         nb.className = "btn ib"; ag.className = "btn ib blue"; ag.style.display = "";
-        nb.querySelector(".t").textContent = "복습하기"; $("r-next-s").textContent = STAGES[lastStage - 1].name + " " + pendLeft + "개";
+        nb.querySelector(".t").textContent = "복습하기"; $("r-next-s").textContent = lvName(lastStage) + " " + pendLeft + "개";
         nb.dataset.act = "review";
       }
       sfx(r.over ? "over" : "clear");
@@ -590,9 +622,17 @@
 
   function renderModes() {
     var n = lastStage;
-    var empty = wordsOfStage(n).length < 10;   // 단어 기준(문장은 단계별 50개 확보)
+    var empty = wordsOfStage(n).length < 10;   // 단어 기준(문장은 레벨당 10개 확보)
     var note = $("modes-note"); note.textContent = "";
-    if (empty) note.appendChild(el("div", "say bad", STAGES[n - 1].name + " 단어는 아직 준비 중이에요"));
+    if (empty) note.appendChild(el("div", "say bad", lvName(n) + " 단어는 아직 준비 중이에요"));
+    var req = requiredModes(), nx = EJ.get("progress").lvs[String(n + 1)];
+    $("modes-prog").textContent = "모드 " + EJ.modesCleared(n, req) + "/" + req.length + " 달성" + ((nx && !nx.unlocked) ? " · 모두 A 이상이면 다음 레벨이 열려요" : "");
+    var lvst = EJ.get("progress").lvs[String(n)];
+    for (var mi = 0; mi < MODE_ORDER.length; mi++) {
+      var mg = document.querySelector('[data-mg="' + MODE_ORDER[mi] + '"]'), g = (lvst.g && lvst.g[MODE_ORDER[mi]]) || "";
+      mg.textContent = g || "-";
+      mg.className = "mg" + (g ? (EJ.gradeAtLeast(g, "A") ? " ok" : "") : " none");
+    }
     var btns = document.querySelectorAll("[data-start]");
     for (var i = 0; i < btns.length; i++) btns[i].disabled = empty;
     // 듣기: 영어 음성이 없는 기기에서는 막고 안내한다
@@ -600,6 +640,7 @@
     var noSound = !Sound.ok();
     lb.classList.toggle("soon", noSound);
     $("listen-chip").style.display = noSound ? "" : "none";
+    document.querySelector('[data-mg="listen"]').style.display = noSound ? "none" : ""; 
     if (noSound) {
       lb.disabled = true;
       note.appendChild(el("div", "say bad", "이 기기에서는 소리를 지원하지 않아요. 듣기는 할 수 없어요"));
@@ -643,7 +684,7 @@
     if (t.closest("#exit-yes")) { closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
     if (t.closest("#r-next")) { closeRes(); if (lastReview || $("r-next").dataset.act === "review") { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
     if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
-    if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = STAGES[lastStage - 1].name; show("modes"); return; }
+    if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = lvName(lastStage); show("modes"); return; }
   });
 
   // 키보드: 방향키로 활성 보기 사이 이동 (Enter는 버튼 기본 동작)
@@ -681,6 +722,8 @@
       if (e.target.getAttribute("aria-disabled") !== "true") chooseStyle(e.target.dataset.style);
     }
   });
+
+  window.addEventListener("resize", refit);
 
   var h = (location.hash || "#home").slice(1);
   show(h === "modes" || h === "review" || h === "settings" ? h : h === "wordbook" ? "review" : "home");

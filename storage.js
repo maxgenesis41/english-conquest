@@ -1,13 +1,17 @@
 // 영어정복 2단계: 브라우저 로컬 저장 (설계.md 4-2)
-// 저장 4종: ej_progress(단계·최고 점수), ej_wordbook(맞힌 단어, v0.29부터 사용 중단), ej_review(틀린 단어, v0.29), ej_settings(설정)
+// 저장 4종: ej_progress(레벨별 최고 등급·모드별 최고 점수), ej_wordbook(맞힌 단어, v0.29부터 사용 중단), ej_review(틀린 단어), ej_settings(설정)
+// v0.36: 단계 4개 -> 레벨(Lv) 1~99. progress·review는 형식 2로 올렸고, 형식이 다른 옛 기록은 읽을 때 기본값으로 시작한다(덮어쓰기는 다음 변경 때만).
+// v0.37: 다음 레벨 열림 조건 = 그 레벨의 모든 모드(필수 모드)에서 A 이상 + 틀린 단어 0개. 모드별 최고 등급은 lvs[레벨].g({모드:등급})에 저장한다(형식 번호 그대로, 없으면 빈 값).
 // 원칙: 값이 바뀔 때만 저장한다(열기만 해서 저장하지 않음). 저장이 막혀도 화면은 깨지지 않는다.
 var EJ = (function () {
   "use strict";
 
-  var FORMAT = 1; // 저장 형식 번호(v). 나중에 형식이 바뀌면 이 값을 올리고 옛 기록을 변환한다
+  var FORMATS = { progress: 2, review: 2, wordbook: 1, settings: 1 }; // 저장 형식 번호(v). 형식이 바뀌면 해당 값을 올린다(옛 형식 기록은 기본값으로 시작)
   var KEYS = { progress: "ej_progress", wordbook: "ej_wordbook", review: "ej_review", settings: "ej_settings" };
   var GRADES = ["C", "B", "A", "S"]; // 낮은 등급 -> 높은 등급
-  var STAGE_COUNT = 4;
+  var MODES = ["letter", "meaning", "spell", "sentence", "listen"]; // 모드 id(화면 순서)
+  var NEED = "A";        // 다음 레벨을 열려면 각 모드에서 필요한 최저 등급
+  var LV_COUNT = 99;     // 레벨 수(전체 Lv 1개 체계)
   var STYLES = ["retro", "bright", "chime"]; // 효과음 스타일: 레트로 8비트 / 밝은 게임풍 / 부드러운 차임
   var NEXTS = ["order", "same"];
 
@@ -18,35 +22,39 @@ var EJ = (function () {
 
   function defaults(name) {
     if (name === "progress") {
-      var stages = {};
-      for (var i = 1; i <= STAGE_COUNT; i++) {
-        stages[String(i)] = { best: "", unlocked: i === 1 };
+      var lvs = {};
+      for (var i = 1; i <= LV_COUNT; i++) {
+        lvs[String(i)] = { best: "", unlocked: i === 1 };
       }
-      return { v: FORMAT, stages: stages, modes: {} };
+      return { v: FORMATS.progress, lvs: lvs, modes: {} };
     }
-    if (name === "wordbook" || name === "review") return { v: FORMAT, items: [] };
-    return { v: FORMAT, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, next: "order" };
+    if (name === "wordbook" || name === "review") return { v: FORMATS[name], items: [] };
+    return { v: FORMATS.settings, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, next: "order" };
   }
 
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
 
   function valid(name, o) {
-    if (!isObj(o) || o.v !== FORMAT) return false;
+    if (!isObj(o) || o.v !== FORMATS[name]) return false;
     if (name === "progress") {
-      if (!isObj(o.stages) || !isObj(o.modes)) return false;
-      for (var i = 1; i <= STAGE_COUNT; i++) {
-        var s = o.stages[String(i)];
+      if (!isObj(o.lvs) || !isObj(o.modes)) return false;
+      for (var i = 1; i <= LV_COUNT; i++) {
+        var s = o.lvs[String(i)];
         if (!isObj(s) || typeof s.unlocked !== "boolean") return false;
         if (s.best !== "" && GRADES.indexOf(s.best) < 0) return false;
+        if (s.g !== undefined) {
+          if (!isObj(s.g)) return false;
+          for (var gk in s.g) if (MODES.indexOf(gk) < 0 || GRADES.indexOf(s.g[gk]) < 0) return false;
+        }
       }
       return true;
     }
-    if (name === "review") {   // 틀린 단어: id(문자열)·level(1~단계 수)·date(문자열)
+    if (name === "review") {   // 틀린 단어: id(문자열)·lv(1~레벨 수)·date(문자열)
       if (!Array.isArray(o.items)) return false;
       for (var r = 0; r < o.items.length; r++) {
         var rv = o.items[r];
         if (!isObj(rv) || typeof rv.id !== "string" || typeof rv.date !== "string") return false;
-        if (typeof rv.level !== "number" || rv.level < 1 || rv.level > STAGE_COUNT || rv.level % 1 !== 0) return false;
+        if (typeof rv.lv !== "number" || rv.lv < 1 || rv.lv > LV_COUNT || rv.lv % 1 !== 0) return false;
       }
       return true;
     }
@@ -125,31 +133,55 @@ var EJ = (function () {
     return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
   }
 
-  // 한 판 결과 기록: 단계 최고 등급·모드 최고 점수를 갱신하고, 등급 B 이상이며 그 단계 틀린 단어가 0개면 다음 단계를 연다
-  function recordResult(stage, modeId, grade, score) {
-    if (GRADES.indexOf(grade) < 0 || stage < 1 || stage > STAGE_COUNT) return false;
-    var p = get("progress");
-    var st = p.stages[String(stage)];
-    if (GRADES.indexOf(grade) > GRADES.indexOf(st.best)) st.best = grade;
-    var key = stage + ":" + modeId;
-    if (typeof score === "number" && (typeof p.modes[key] !== "number" || score > p.modes[key])) p.modes[key] = score;
-    var next = p.stages[String(stage + 1)];
-    if (next && gradeAtLeast(st.best, "B") && reviewLeft(stage) === 0) next.unlocked = true;   // v0.31: 그 단계의 틀린 단어 복습도 끝나야 연다
-    return set("progress", p);
+  // 필수 모드 목록 정리: 인수가 없거나 잘못되면 전체 모드
+  function reqList(required) {
+    if (!Array.isArray(required)) return MODES.slice();
+    var out = [];
+    for (var i = 0; i < required.length; i++) if (MODES.indexOf(required[i]) >= 0 && out.indexOf(required[i]) < 0) out.push(required[i]);
+    return out.length ? out : MODES.slice();
   }
 
-  // 그 단계(level)에 남은 틀린 단어 수
-  function reviewLeft(stage) {
-    var items = get("review").items, n = 0;
-    for (var i = 0; i < items.length; i++) if (items[i].level === stage) n++;
+  // 그 레벨에서 A 이상을 달성한 필수 모드 수
+  function modesCleared(lv, required) {
+    var st = get("progress").lvs[String(lv)], req = reqList(required), n = 0;
+    if (!st) return 0;
+    for (var i = 0; i < req.length; i++) if (st.g && gradeAtLeast(st.g[req[i]] || "", NEED)) n++;
     return n;
   }
 
-  // 복습을 마친 뒤 다음 단계 열기: 그 단계 최고 등급 B 이상 + 틀린 단어 0개일 때만 연다. 새로 열었으면 true(이미 열려 있으면 저장하지 않고 false)
-  function tryUnlock(stage) {
+  // 한 판 결과 기록: 레벨 최고 등급·모드별 최고 등급·모드 최고 점수를 갱신하고, 필수 모드 모두 A 이상이며 그 레벨 틀린 단어가 0개면 다음 레벨을 연다
+  function recordResult(lv, modeId, grade, score, required) {
+    if (GRADES.indexOf(grade) < 0 || lv < 1 || lv > LV_COUNT || MODES.indexOf(modeId) < 0) return false;
     var p = get("progress");
-    var st = p.stages[String(stage)], next = p.stages[String(stage + 1)];
-    if (!st || !next || next.unlocked || !gradeAtLeast(st.best, "B") || reviewLeft(stage) > 0) return false;
+    var st = p.lvs[String(lv)];
+    if (GRADES.indexOf(grade) > GRADES.indexOf(st.best)) st.best = grade;
+    if (!st.g) st.g = {};
+    if (GRADES.indexOf(grade) > GRADES.indexOf(st.g[modeId] || "")) st.g[modeId] = grade;
+    var key = lv + ":" + modeId;
+    if (typeof score === "number" && (typeof p.modes[key] !== "number" || score > p.modes[key])) p.modes[key] = score;
+    var next = p.lvs[String(lv + 1)];
+    if (next && allCleared(st, required) && reviewLeft(lv) === 0) next.unlocked = true;
+    return set("progress", p);
+  }
+
+  function allCleared(st, required) {
+    var req = reqList(required);
+    for (var i = 0; i < req.length; i++) if (!st.g || !gradeAtLeast(st.g[req[i]] || "", NEED)) return false;
+    return true;
+  }
+
+  // 그 레벨에 남은 틀린 단어 수
+  function reviewLeft(lv) {
+    var items = get("review").items, n = 0;
+    for (var i = 0; i < items.length; i++) if (items[i].lv === lv) n++;
+    return n;
+  }
+
+  // 복습을 마친 뒤 다음 레벨 열기: 필수 모드 모두 A 이상 + 틀린 단어 0개일 때만 연다. 새로 열었으면 true(이미 열려 있으면 저장하지 않고 false)
+  function tryUnlock(lv, required) {
+    var p = get("progress");
+    var st = p.lvs[String(lv)], next = p.lvs[String(lv + 1)];
+    if (!st || !next || next.unlocked || !allCleared(st, required) || reviewLeft(lv) > 0) return false;
     next.unlocked = true;
     return set("progress", p);
   }
@@ -162,7 +194,7 @@ var EJ = (function () {
     return set("wordbook", wb);
   }
 
-  // 틀린 단어 추가(한 판이 끝날 때 한 번에): list는 [{id, level}]. 이미 있는 단어·잘못된 항목은 건너뛰고, 새로 추가한 것이 있을 때만 저장한다
+  // 틀린 단어 추가(한 판이 끝날 때 한 번에): list는 [{id, lv}]. 이미 있는 단어·잘못된 항목은 건너뛰고, 새로 추가한 것이 있을 때만 저장한다
   // 반환: 새로 추가한 개수(저장 못 했으면 0)
   function addWrongs(list, date) {
     var rv = get("review"), have = {}, added = 0, i;
@@ -170,9 +202,9 @@ var EJ = (function () {
     for (i = 0; i < list.length; i++) {
       var it = list[i];
       if (!it || typeof it.id !== "string" || have[it.id]) continue;
-      if (typeof it.level !== "number" || it.level < 1 || it.level > STAGE_COUNT || it.level % 1 !== 0) continue;
+      if (typeof it.lv !== "number" || it.lv < 1 || it.lv > LV_COUNT || it.lv % 1 !== 0) continue;
       have[it.id] = true;
-      rv.items.push({ id: it.id, level: it.level, date: date || today() });
+      rv.items.push({ id: it.id, lv: it.lv, date: date || today() });
       added++;
     }
     if (!added) return 0;
@@ -217,8 +249,8 @@ var EJ = (function () {
   }
 
   return {
-    KEYS: KEYS, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
+    KEYS: KEYS, MODES: MODES, NEED: NEED, LV_COUNT: LV_COUNT, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
+    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

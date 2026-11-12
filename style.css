@@ -134,8 +134,8 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 .empty span { color: var(--sub); font-size: 14px; }
 
 /* ===== 3단계 게임 화면 ===== */
-.tiles { flex-wrap: nowrap; }
-.tiles span { width: auto; flex: 0 1 46px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(var(--cols, 8), minmax(0, 46px)); justify-content: center; row-gap: 8px; }   /* v0.36: 긴 단어(13~14글자)는 JS가 --cols로 두 줄로 나눈다 */
+.tiles span { width: auto; min-width: 0; }
 .tiles.sm span { height: 52px; font-size: 24px; }
 .tiles.xs { gap: 4px; }
 .tiles.xs span { height: 46px; font-size: 19px; border-radius: 9px; border-width: 2px; }
@@ -180,7 +180,7 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 .pool.sm { gap: 8px; }
 .pool.sm .opt { width: 50px; height: 58px; font-size: 26px; border-radius: 14px; }
 .pool .opt.used { opacity: .3; box-shadow: 0 2px 0 var(--ink); transform: translateY(4px); }
-.slots { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 46px)); justify-content: center; gap: 6px; }
+.slots { display: grid; grid-template-columns: repeat(var(--cols, var(--n)), minmax(0, 46px)); justify-content: center; gap: 6px; row-gap: 8px; }
 .slots.sm { gap: 5px; }
 .slots.xs { gap: 4px; }
 .slots span { min-width: 0; height: 56px; border-radius: 12px; background: #EAF3FF; border: 3px solid var(--ink); display: grid; place-items: center; font-size: 28px; font-weight: 700; box-shadow: 0 3px 0 var(--ink); }
@@ -250,6 +250,8 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 .sw.on::after { left: 24px; }
 .sw.dis { opacity: .45; }
 .set .src { font-size: 12px; color: var(--sub); line-height: 1.6; padding: 10px 0; }
+.set .src + .src { border-top: 2px solid #E3EBF7; }
+.set .src a { color: #3D8BFF; font-weight: 700; }
 
 .set .dimrow { opacity: .7; }
 .set .dimrow .rt b { color: #7C8AA8; }
@@ -314,3 +316,9 @@ button.sw { padding: 0; cursor: pointer; }
 .banner.note .o { color: #E0542B; font-size: 13px; }
 
 .rv-guide{margin:8px 4px 0;font-size:13px;line-height:1.4;color:#6B6475;text-align:center}
+
+/* v0.37: 모드별 최고 등급 칩, 모드 달성 진행 줄 */
+.mode .mg { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 3px solid var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 15px; flex: none; }
+.mode .mg.ok { background: var(--yellow); }
+.mode .mg.none { background: #EEF3FA; color: var(--gray); border-color: var(--gray); }
+.mprog { margin: 0 0 14px; font-size: 14px; font-weight: 700; color: var(--sub); }

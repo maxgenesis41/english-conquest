@@ -56,7 +56,7 @@ var Game = (function () {
     return { id: w.id, en: w.en, ko: w.ko, letters: mixed, answer: w.en.toLowerCase() };
   }
 
-  // 듣기: 소리로 낸 단어를 영어 보기 4개에서 고른다(보기는 같은 단계의 다른 단어)
+  // 듣기: 소리로 낸 단어를 영어 보기 4개에서 고른다(보기는 같은 레벨의 다른 단어)
   function listenQuestion(w, words, rng) {
     var pool = [];
     for (var i = 0; i < words.length; i++) if (words[i].id !== w.id && words[i].en !== w.en) pool.push(words[i].en);
@@ -71,13 +71,13 @@ var Game = (function () {
     return { id: s.id, en: s.en, ko: s.ko, tokens: tokens, pool: mixed, answer: s.en };
   }
 
-  // 새 판 시작. 단어가 10개 미만이면 null(그 단계는 아직 준비 중)
+  // 새 판 시작. 단어가 10개 미만이면 null(그 레벨은 아직 준비 중)
   function start(o) {
     var rng = o.rng || Math.random;
     var words = o.words || [];
     var total = o.total || TOTAL;
     if (words.length < total) return null;
-    var pool = o.pool || words;   // 보기(오답) 후보: 복습은 같은 단계 전체 단어
+    var pool = o.pool || words;   // 보기(오답) 후보: 복습은 같은 레벨 전체 단어
     var picked = o.ordered ? words.slice(0, total) : shuffle(words, rng).slice(0, total);
     var qs = [];
     for (var i = 0; i < picked.length; i++) {
@@ -87,7 +87,7 @@ var Game = (function () {
               o.mode === "listen" ? listenQuestion(picked[i], pool, rng) : meaningQuestion(picked[i], pool, rng));
     }
     return {
-      stage: o.stage, mode: o.mode, questions: qs, index: 0, total: total, review: !!o.review,
+      lv: o.lv, mode: o.mode, questions: qs, index: 0, total: total, review: !!o.review,
       hp: MAX_HP, score: 0, combo: 0, bestCombo: 0, correct: 0, answered: 0,
       hintsLeft: HINTS, hintUsed: false, removed: [], picked: null,
       ending: false, over: false, finished: false, correctIds: [], wrongIds: []
