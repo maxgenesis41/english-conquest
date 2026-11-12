@@ -586,3 +586,47 @@ button.sw { padding: 0; cursor: pointer; }
   #game .spk { width: 76px; height: 76px; margin: 4px auto 4px; }
   #game .foot { padding-top: 8px; }
 }
+
+/* v0.57 레벨 열림 축하 연출 (결과 팝업, 줄무늬 없는 배경: 빛 번짐·방울·색종이·폭죽) */
+.modal.res.up { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(76,203,75,.55), 0 0 30px 8px rgba(255,200,58,.65); }
+.modal.res.pf.up { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,200,58,.6), 0 0 34px 10px rgba(76,203,75,.6); }
+.modal.res .banner.unlock { position: relative; margin-top: 16px; padding: 9px 10px 8px; gap: 10px; justify-content: center; background: linear-gradient(180deg, #FFF6BF 0%, #FFD84D 100%); box-shadow: 0 4px 0 var(--ink), inset 0 3px 0 rgba(255,255,255,.7); }
+.unlock .utag { position: absolute; left: 10px; top: -13px; transform: rotate(-6deg); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #fff; background: #FF5767; border: 3px solid var(--ink); border-radius: 999px; padding: 0 9px; line-height: 18px; text-shadow: 0 1px 0 rgba(36,51,107,.5); }
+.unlock .ulock { width: 38px; height: 38px; flex: none; overflow: visible; }
+.unlock .utx { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; }
+.unlock .utx b { font-size: 16px; line-height: 1.1; color: var(--ink); }
+.unlock .uchip { font-size: 14px; font-weight: 700; color: #fff; background: #4CCB4B; border: 3px solid var(--ink); border-radius: 999px; padding: 0 12px; line-height: 20px; text-shadow: 0 2px 0 var(--ink); box-shadow: 0 2px 0 var(--ink); }
+.unlock .usp { position: absolute; font-size: 14px; color: var(--yellow); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; pointer-events: none; line-height: 1; }
+/* 화면 전체 효과 층: 빛줄기(뒤) + 색종이(앞) */
+.ufx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.ufx.back { z-index: 0; }
+.ufx.front { z-index: 6; }
+.ufx .cf { position: absolute; top: -24px; left: var(--x); width: var(--w); height: var(--h); background: var(--c); border: 2px solid var(--ink); border-radius: 3px; opacity: 0; }
+.ufx .cf.rd { border-radius: 50%; }
+@keyframes ufall { 0% { opacity: 1; transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(var(--sw), 28vh) rotate(180deg); } 50% { transform: translate(calc(var(--sw) * -1), 56vh) rotate(380deg); } 100% { opacity: 1; transform: translate(var(--sw), 112vh) rotate(760deg); } }
+@keyframes ushackle { 0% { transform: translate(0, 0) rotate(0); } 35% { transform: translate(1px, 4px) rotate(0); } 100% { transform: translate(-1px, -7px) rotate(-28deg); } }
+@keyframes ubanner { 0% { transform: scale(.3) rotate(-6deg); opacity: 0; } 55% { transform: scale(1.12) rotate(2deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes uspark { 0% { transform: translate(0, 0) scale(.2); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.1); opacity: 0; } }
+@keyframes ushine { 0% { transform: translateX(-130%) skewX(-20deg); } 100% { transform: translateX(260%) skewX(-20deg); } }
+.unlock::after { content: ""; position: absolute; inset: 0; border-radius: 13px; background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%); transform: translateX(-130%) skewX(-20deg); pointer-events: none; overflow: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+    .ufx .cf { animation: ufall var(--d) cubic-bezier(.3,.1,.5,1) var(--dl) 1 both; }
+  .unlock { animation: ubanner .6s cubic-bezier(.3,1.4,.5,1) .15s both; }
+  .unlock .ulock .sh { transform-origin: 80% 100%; animation: ushackle .7s ease-out .55s both; }
+  .unlock .usp { animation: uspark .9s ease-out .6s both; }
+  .unlock::after { animation: ushine 1.1s ease-in-out 1s 2; }
+}
+
+/* 줄무늬 없는 배경: 부드러운 빛 번짐 + 떠오르는 반짝 방울 + 터지는 폭죽 */
+.ufx .glow { position: absolute; left: 50%; top: 44%; width: 120vmax; height: 120vmax; margin: -60vmax 0 0 -60vmax; background: radial-gradient(circle, rgba(255,236,150,.55) 0, rgba(255,236,150,.22) 22%, rgba(255,236,150,0) 45%); }
+.ufx .bk { position: absolute; bottom: -30px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--c) 60%); border: 2px solid rgba(255,255,255,.85); opacity: 0; }
+.ufx .fw { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; }
+.ufx .fw i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--c); border: 2px solid var(--ink); opacity: 0; }
+@keyframes ubk { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 15% { opacity: .95; } 100% { opacity: 0; transform: translate(var(--sw), -105vh) scale(1.15); } }
+@keyframes ufw { 0% { opacity: 1; transform: translate(0, 0) scale(.4); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 14px)) scale(1); } }
+@keyframes uglow { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .ufx .glow { animation: uglow 2.2s ease-in-out infinite; }
+  .ufx .bk { animation: ubk var(--d) ease-out var(--dl) 1 both; }
+  .ufx .fw i { animation: ufw 1.1s cubic-bezier(.1,.7,.3,1) var(--dl) 1 both; }
+}

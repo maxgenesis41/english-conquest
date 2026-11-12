@@ -753,7 +753,7 @@
       showRecord(r, prevBest, perfect);
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
-      if (unlockMsg) ban.appendChild(el("div", "banner up", unlockMsg));
+      if (unlockMsg) { ban.appendChild(unlockBanner(lastStage + 1)); ufxStart(); }   // v0.57: 레벨 열림 축하 연출
       else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "경험치 +1! (" + xpNow.cur + "/" + xpNow.total + ")" : "이 모드 칸은 가득 찼어요 (" + xpNow.cur + "/" + xpNow.total + ")"));
       var nm = pickNext(set.next);
       var nb = $("r-next"), ag = $("r-again");
@@ -771,9 +771,11 @@
         nb.dataset.act = "review";
       }
       sfx(r.over ? "over" : perfect ? "perfect" : "clear");
+      if (unlockMsg) unlockSound(perfect);
       $("res-modal").style.display = "grid"; nb.focus();
     } else {
       sfx(perfect ? "perfect" : "clear");
+      if (unlockMsg) unlockSound(perfect);
       var m2 = pickNext(set.next) || lastMode;
       if (!startGame(lastStage, m2)) startGame(lastStage, lastMode);
       showToast((perfect ? "🌟 PERFECT! " : "") + lab.split(" · ")[1] + " " + r.grade + " · " + r.score + "점 · " + r.correct + "/" + r.answered, unlockMsg);
@@ -836,7 +838,65 @@
     clearTimeout(toastT);
     toastT = setTimeout(function () { t.style.display = "none"; }, 2200);
   }
-  function closeRes() { $("res-modal").style.display = "none"; }
+  function closeRes() { $("res-modal").style.display = "none"; ufxClear(); }
+
+  // v0.57: 레벨 열림 축하 연출(결과 팝업). 빛 번짐·방울·색종이·폭죽은 CSS 애니메이션이라 모션 줄이기면 보이지 않는다(배너만 표시)
+  var UFX_COLORS = ["#FF5767", "#FFC83A", "#4CCB4B", "#3D8BFF", "#FF6FAE", "#FF8F3A"], ufxT = null, ufxS = null;
+  function ufxClear() {
+    var sh = $("res-modal"), l = sh.querySelectorAll(".ufx"), i;
+    for (i = 0; i < l.length; i++) sh.removeChild(l[i]);
+    sh.querySelector(".modal.res").classList.remove("up");
+    clearTimeout(ufxT); clearTimeout(ufxS);
+  }
+  function unlockSound(perfect) {   // 클리어·PERFECT 소리가 끝난 뒤 열림 소리(팝업이 열려 있을 때만)
+    clearTimeout(ufxS);
+    ufxS = setTimeout(function () { sfx("unlock"); }, perfect ? 2200 : 950);
+  }
+  function unlockBanner(n) {
+    var d = el("div", "banner up unlock"), i, sp, s, pts = [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1.4], [0, 1.4], [-1.6, 0], [1.6, 0]];
+    d.innerHTML = '<span class="utag">NEW</span>' +
+      '<svg class="ulock" viewBox="0 0 40 40" aria-hidden="true"><g class="sh"><path d="M12 19V13a8 8 0 0 1 16 0v6" fill="none" stroke="#24336B" stroke-width="9" stroke-linecap="round"/><path d="M12 19V13a8 8 0 0 1 16 0v6" fill="none" stroke="#DDE6F5" stroke-width="3.4" stroke-linecap="round"/></g><rect x="6" y="18" width="28" height="19" rx="5" fill="#FFC83A" stroke="#24336B" stroke-width="3"/><circle cx="20" cy="26.5" r="3" fill="#24336B"/><rect x="18.8" y="27" width="2.4" height="5.5" rx="1.2" fill="#24336B"/></svg>' +
+      '<div class="utx"><b>새 레벨이 열렸어요!</b><span class="uchip">' + lvName(n) + '</span></div>';
+    for (i = 0; i < pts.length; i++) {
+      sp = el("span", "usp", i % 2 ? "\u2726" : "\u2605");
+      sp.setAttribute("aria-hidden", "true"); sp.style.left = "44px"; sp.style.top = "50%";
+      sp.style.setProperty("--dx", (pts[i][0] * 34) + "px"); sp.style.setProperty("--dy", (pts[i][1] * 22) + "px");
+      d.appendChild(sp);
+    }
+    return d;
+  }
+  function ufxStart() {
+    ufxClear();
+    var sh = $("res-modal"), back = el("div", "ufx back"), bb, front, i, j, k, c, f, q, ang, r, dd, cols = UFX_COLORS;
+    function rnd() { return Math.random(); }
+    sh.querySelector(".modal.res").classList.add("up");
+    back.appendChild(el("div", "glow")); sh.insertBefore(back, sh.firstChild);
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;   // 모션 줄이기: 배너·테두리 빛만
+    bb = el("div", "ufx back");
+    for (i = 0; i < 16; i++) {
+      c = el("i", "bk");
+      c.style.cssText = "--x:" + Math.round(rnd() * 100) + "%;--s:" + (10 + Math.round(rnd() * 16)) + "px;--c:" + cols[i % 6] + ";--sw:" + (Math.round(rnd() * 50) - 25) + "px;--d:" + (3 + rnd() * 1.5).toFixed(2) + "s;--dl:" + (rnd() * 1.2).toFixed(2) + "s";
+      bb.appendChild(c);
+    }
+    sh.insertBefore(bb, sh.children[1]);
+    front = el("div", "ufx front");
+    for (i = 0; i < 44; i++) {
+      c = el("i", "cf" + (i % 4 === 0 ? " rd" : ""));
+      c.style.cssText = "--x:" + Math.round(rnd() * 100) + "%;--w:" + (8 + Math.round(rnd() * 5)) + "px;--h:" + (11 + Math.round(rnd() * 6)) + "px;--c:" + cols[i % 6] + ";--sw:" + (Math.round(rnd() * 60) - 30) + "px;--d:" + (2 + rnd() * 1.1).toFixed(2) + "s;--dl:" + (rnd() * 0.9).toFixed(2) + "s";
+      front.appendChild(c);
+    }
+    [[18, 20, 0.15], [80, 15, 0.45], [50, 9, 0.75]].forEach(function (p) {
+      f = el("div", "fw"); f.style.cssText = "--x:" + p[0] + "%;--y:" + p[1] + "%;--dl:" + p[2] + "s";
+      for (q = 0; q < 14; q++) {
+        ang = q / 14 * Math.PI * 2; r = 46 + (q % 2) * 16; dd = el("i");
+        dd.style.cssText = "--c:" + cols[(q + p[0]) % 6] + ";--dx:" + Math.round(Math.cos(ang) * r) + "px;--dy:" + Math.round(Math.sin(ang) * r) + "px";
+        f.appendChild(dd);
+      }
+      front.appendChild(f);
+    });
+    sh.appendChild(front);
+    ufxT = setTimeout(function () { if (front.parentNode) front.parentNode.removeChild(front); }, 5000);   // 색종이·폭죽은 한 번만(5초 뒤 정리)
+  }
 
   function openExit() { pauseLimit(); $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
   function closeExit() { $("exit-modal").style.display = "none"; resumeLimit(); }
