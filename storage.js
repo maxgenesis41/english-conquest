@@ -2,6 +2,8 @@
 // 저장 4종: ej_progress(레벨별 최고 등급·모드별 최고 점수), ej_wordbook(맞힌 단어, v0.29부터 사용 중단), ej_review(틀린 단어), ej_settings(설정)
 // v0.36: 단계 4개 -> 레벨(Lv) 1~99. progress·review는 형식 2로 올렸고, 형식이 다른 옛 기록은 읽을 때 기본값으로 시작한다(덮어쓰기는 다음 변경 때만).
 // v0.37: 다음 레벨 열림 조건 = 그 레벨의 모든 모드(필수 모드)에서 A 이상 + 틀린 단어 0개. 모드별 최고 등급은 lvs[레벨].g({모드:등급})에 저장한다(형식 번호 그대로, 없으면 빈 값).
+// v0.39: 레벨업 = 경험치 칸 방식. 레벨 L의 필요 라운드 R(L)=올림(√L), 바는 (필수 모드 수)×R칸. 모드 1판을 A 이상으로 클리어하면 그 모드 칸이 1 늘고(모드당 최대 R칸), 모든 모드가 R칸이면 다음 레벨이 열린다(+틀린 단어 0개).
+//        모드별 칸 수는 lvs[레벨].c({모드:횟수})에 저장한다(형식 번호 그대로, 없으면 빈 값). c가 없는 모드는 g가 A 이상이면 1칸으로 본다(옛 기록 인정).
 // 원칙: 값이 바뀔 때만 저장한다(열기만 해서 저장하지 않음). 저장이 막혀도 화면은 깨지지 않는다.
 var EJ = (function () {
   "use strict";
@@ -45,6 +47,10 @@ var EJ = (function () {
         if (s.g !== undefined) {
           if (!isObj(s.g)) return false;
           for (var gk in s.g) if (MODES.indexOf(gk) < 0 || GRADES.indexOf(s.g[gk]) < 0) return false;
+        }
+        if (s.c !== undefined) {
+          if (!isObj(s.c)) return false;
+          for (var ck in s.c) if (MODES.indexOf(ck) < 0 || typeof s.c[ck] !== "number" || s.c[ck] < 0 || s.c[ck] % 1 !== 0) return false;
         }
       }
       return true;
@@ -141,7 +147,28 @@ var EJ = (function () {
     return out.length ? out : MODES.slice();
   }
 
-  // 그 레벨에서 A 이상을 달성한 필수 모드 수
+  // 레벨 lv의 필요 라운드 R(lv) = 올림(√lv): Lv1=1, Lv2~4=2, Lv5~9=3, ... Lv82~99=10
+  function need(lv) { return Math.ceil(Math.sqrt(lv)); }
+
+  // 그 레벨·모드의 채운 칸 수(최대 R). c가 없으면 옛 기록(g가 A 이상)을 1칸으로 본다
+  function slotOf(st, lv, modeId) {
+    if (!st) return 0;
+    var n = (st.c && typeof st.c[modeId] === "number") ? st.c[modeId] : (st.g && gradeAtLeast(st.g[modeId] || "", NEED) ? 1 : 0);
+    return Math.min(n, need(lv));
+  }
+
+  function modeSlots(lv, modeId) {
+    return slotOf(get("progress").lvs[String(lv)], lv, modeId);
+  }
+
+  // 그 레벨 경험치: {cur: 채운 칸, total: 전체 칸, per: 모드당 칸}
+  function xp(lv, required) {
+    var st = get("progress").lvs[String(lv)], req = reqList(required), cur = 0;
+    for (var i = 0; i < req.length; i++) cur += slotOf(st, lv, req[i]);
+    return { cur: cur, total: req.length * need(lv), per: need(lv) };
+  }
+
+  // (v0.37 호환) 그 레벨에서 A 이상을 달성한 필수 모드 수
   function modesCleared(lv, required) {
     var st = get("progress").lvs[String(lv)], req = reqList(required), n = 0;
     if (!st) return 0;
@@ -155,18 +182,24 @@ var EJ = (function () {
     var p = get("progress");
     var st = p.lvs[String(lv)];
     if (GRADES.indexOf(grade) > GRADES.indexOf(st.best)) st.best = grade;
+    var base = slotOf(st, lv, modeId);   // 등급 기록보다 먼저 계산한다(c가 없는 옛 기록은 g로 1칸을 인정하므로, g를 먼저 바꾸면 이중으로 센다)
     if (!st.g) st.g = {};
     if (GRADES.indexOf(grade) > GRADES.indexOf(st.g[modeId] || "")) st.g[modeId] = grade;
+    if (gradeAtLeast(grade, NEED)) {   // A 이상 클리어: 그 모드 칸 +1(최대 R칸). 칸이 이미 가득이면 값이 같아 저장하지 않는다
+      if (!st.c) st.c = {};
+      st.c[modeId] = Math.min(base + 1, need(lv));
+    }
     var key = lv + ":" + modeId;
     if (typeof score === "number" && (typeof p.modes[key] !== "number" || score > p.modes[key])) p.modes[key] = score;
     var next = p.lvs[String(lv + 1)];
-    if (next && allCleared(st, required) && reviewLeft(lv) === 0) next.unlocked = true;
+    if (next && allCleared(st, required, lv) && reviewLeft(lv) === 0) next.unlocked = true;
     return set("progress", p);
   }
 
-  function allCleared(st, required) {
+  // 필수 모드가 모두 R칸이면 true(lv는 st가 속한 레벨)
+  function allCleared(st, required, lv) {
     var req = reqList(required);
-    for (var i = 0; i < req.length; i++) if (!st.g || !gradeAtLeast(st.g[req[i]] || "", NEED)) return false;
+    for (var i = 0; i < req.length; i++) if (slotOf(st, lv, req[i]) < need(lv)) return false;
     return true;
   }
 
@@ -181,7 +214,7 @@ var EJ = (function () {
   function tryUnlock(lv, required) {
     var p = get("progress");
     var st = p.lvs[String(lv)], next = p.lvs[String(lv + 1)];
-    if (!st || !next || next.unlocked || !allCleared(st, required) || reviewLeft(lv) > 0) return false;
+    if (!st || !next || next.unlocked || !allCleared(st, required, lv) || reviewLeft(lv) > 0) return false;
     next.unlocked = true;
     return set("progress", p);
   }
@@ -250,7 +283,7 @@ var EJ = (function () {
 
   return {
     KEYS: KEYS, MODES: MODES, NEED: NEED, LV_COUNT: LV_COUNT, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
+    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, need: need, xp: xp, modeSlots: modeSlots, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

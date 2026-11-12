@@ -25,7 +25,7 @@
   var openBands = {};   // 사용자가 접거나 펼친 대역(저장하지 않음). 정하지 않은 대역은 현재 레벨이 있는 대역만 펼친다
   function openedMsg(n) { return "새 레벨이 열렸어요! (" + lvName(n) + ")"; }   // 숫자 뒤 조사(이/가)를 피하려고 괄호로 쓴다
 
-  // v0.37: 다음 레벨을 열려면 필수 모드 모두 A 이상(듣기는 영어 음성이 없는 기기에서 제외) + 틀린 단어 0개
+  // v0.39: 다음 레벨을 열려면 경험치 칸을 모두 채우고(모드 1판 A 이상 = 1칸, 모드당 R=올림(√레벨)칸) 틀린 단어 0개. 듣기는 영어 음성이 없는 기기에서 제외
   function requiredModes() {
     var out = [];
     for (var i = 0; i < MODE_ORDER.length; i++) if (MODE_ORDER[i] !== "listen" || Sound.ok()) out.push(MODE_ORDER[i]);
@@ -41,9 +41,9 @@
 
   // 잠긴 레벨 카드를 눌렀을 때 안내(현재 레벨 기준: 거기서부터 차례대로 열린다)
   function lockMsg() {
-    var f = frontierLv(), req = requiredModes(), c = EJ.modesCleared(f, req), left = EJ.reviewLeft(f);
-    if (c === req.length && left > 0) showToast("틀린 단어 복습 " + left + "개를 마쳐야 해요", lvName(f) + " 모드는 모두 달성했어요");
-    else showToast(lvName(f) + " 모든 모드 A 이상이 필요해요", "모드 " + c + "/" + req.length + " 달성");
+    var f = frontierLv(), req = requiredModes(), x = EJ.xp(f, req), left = EJ.reviewLeft(f);
+    if (x.cur === x.total && left > 0) showToast("틀린 단어 복습 " + left + "개를 마쳐야 해요", lvName(f) + " 경험치는 가득 찼어요");
+    else showToast(lvName(f) + " 경험치를 모두 채워야 해요", "경험치 " + x.cur + "/" + x.total + " (모드마다 A 이상 " + x.per + "회)");
   }
 
   // 홈: 현재 레벨 주변만 표시 — 이전 대역은 접힌 막대(눌러 펼침), 현재 대역은 열린 레벨 + 다음 레벨 1개, 다음 대역은 잠긴 막대 1개(현재 대역의 마지막 레벨이면 그 대역의 첫 레벨 1개도), 그 뒤 대역은 숨김. keepScroll이면 현재 레벨로 스크롤하지 않는다
@@ -55,7 +55,7 @@
       if (st.unlocked) {
         return '<button class="chunk stage' + (n === f ? " now" : "") + '" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
           '<span class="tile pop">' + n + '</span>' +
-          '<span class="txt"><div class="name">' + lvName(n) + (n === f ? '<span class="nowchip">지금</span>' : "") + '</div><div class="meta">' + (st.best ? "모드 " + EJ.modesCleared(n, req) + "/" + req.length + " 달성" : "기록 없음") + '</div></span>' +
+          '<span class="txt"><div class="name">' + lvName(n) + (n === f ? '<span class="nowchip">지금</span>' : "") + '</div><div class="meta">' + (st.best ? "경험치 " + EJ.xp(n, req).cur + "/" + EJ.xp(n, req).total : "기록 없음") + '</div></span>' +
           '<span class="grade' + (st.best ? "" : " none") + '">' + (st.best ? st.best : "-") + '</span></button>';
       }
       return '<button class="chunk stage locked" data-lock="' + n + '" aria-disabled="true" aria-label="' + lvName(n) + ' 잠김">' +
@@ -513,6 +513,7 @@
     var r = Game.result(cur);
     var before = EJ.get("progress").lvs[String(lastStage + 1)];
     var wasUnlocked = !!(before && before.unlocked);
+    var slotBefore = EJ.modeSlots(lastStage, lastMode);
     var i;
     if (lastMode !== "sentence" && r.wrongIds.length) {   // 틀린 단어 기록(문장 제외, 한 판에 한 번 저장)
       var wl = [];
@@ -524,10 +525,10 @@
     var newlyUnlocked = !!(after && after.unlocked && !wasUnlocked);
     var lab = lvName(lastStage) + " · " + MODE_NAMES[lastMode];
     var unlockMsg = newlyUnlocked ? openedMsg(lastStage + 1) : "";
-    // 모든 모드 A 이상을 채웠어도 복습이 남아 다음 레벨이 잠겨 있는 경우
-    var req = requiredModes(), cleared = EJ.modesCleared(lastStage, req);
+    // 경험치를 모두 채웠어도 복습이 남아 다음 레벨이 잠겨 있는 경우
+    var req = requiredModes(), xpNow = EJ.xp(lastStage, req), slotAfter = EJ.modeSlots(lastStage, lastMode);
     var pendLeft = EJ.reviewLeft(lastStage), pendNext = lastStage < LV_COUNT;
-    var pending = !!(pendNext && after && !after.unlocked && cleared === req.length && pendLeft > 0);
+    var pending = !!(pendNext && after && !after.unlocked && xpNow.cur === xpNow.total && pendLeft > 0);
     var set = EJ.get("settings");
     cur = null;
     if (set.result || r.over) {
@@ -550,7 +551,7 @@
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
       if (unlockMsg) ban.appendChild(el("div", "banner up", unlockMsg));
-      else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", "모드 달성! (" + cleared + "/" + req.length + ")"));
+      else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "경험치 +1! (" + xpNow.cur + "/" + xpNow.total + ")" : "이 모드 칸은 가득 찼어요 (" + xpNow.cur + "/" + xpNow.total + ")"));
       var nm = pickNext(set.next);
       var nb = $("r-next"), ag = $("r-again");
       var twoBtn = !(set.next === "order" && nm && nm !== lastMode);
@@ -664,7 +665,8 @@
     var note = $("modes-note"); note.textContent = "";
     if (empty) note.appendChild(el("div", "say bad", lvName(n) + " 단어는 아직 준비 중이에요"));
     var req = requiredModes(), nx = EJ.get("progress").lvs[String(n + 1)];
-    $("modes-prog").textContent = "모드 " + EJ.modesCleared(n, req) + "/" + req.length + " 달성" + ((nx && !nx.unlocked) ? " · 모두 A 이상이면 다음 레벨이 열려요" : "");
+    var xn = EJ.xp(n, req);
+    $("modes-prog").textContent = "경험치 " + xn.cur + "/" + xn.total + " · 모드마다 A 이상 " + xn.per + "회" + ((nx && !nx.unlocked) ? " · 채우면 다음 레벨이 열려요" : "");
     var lvst = EJ.get("progress").lvs[String(n)];
     for (var mi = 0; mi < MODE_ORDER.length; mi++) {
       var mg = document.querySelector('[data-mg="' + MODE_ORDER[mi] + '"]'), g = (lvst.g && lvst.g[MODE_ORDER[mi]]) || "";
