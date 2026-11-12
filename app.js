@@ -7,8 +7,22 @@
   var LV_COUNT = EJ.LV_COUNT;
 
   function lvName(n) { return "레벨 " + n; }
-  // 카드 색: 옛 4단계 범위(입문·초급·초중급·중급)를 그대로 따른다(대역 이름·경계는 v0.37 시안에서 정한다)
-  function lvColor(n) { return n <= 17 ? "var(--green)" : n <= 32 ? "var(--blue)" : n <= 66 ? "var(--orange)" : "var(--pink)"; }
+  // v0.38: 레벨 10개 대역(캐릭터 성장 단계 이름, 10단위 경계). 카드 색은 대역 색을 따른다. 99 달성 뒤의 "신화"(환생)는 대역이 아니라 나중에 만들 상태다
+  var BANDS = [
+    { id: "c", name: "평민", en: "Civilian", from: 1, to: 9, c: "#A98467" },
+    { id: "b", name: "입문자", en: "Beginner", from: 10, to: 19, c: "var(--green)" },
+    { id: "t", name: "견습생", en: "Trainee", from: 20, to: 29, c: "#1FB5A8" },
+    { id: "f", name: "싸움꾼", en: "Fighter", from: 30, to: 39, c: "var(--blue)" },
+    { id: "w", name: "전사", en: "Warrior", from: 40, to: 49, c: "var(--orange)" },
+    { id: "e", name: "정예", en: "Elite", from: 50, to: 59, c: "#E5484D" },
+    { id: "m", name: "마스터", en: "Master", from: 60, to: 69, c: "var(--pink)" },
+    { id: "g", name: "그랜드마스터", en: "Grandmaster", from: 70, to: 79, c: "#8A5CF6" },
+    { id: "p", name: "에픽", en: "Epic", from: 80, to: 89, c: "#5B6EE8" },
+    { id: "l", name: "전설", en: "Legend", from: 90, to: 99, c: "#E0A100" }
+  ];
+  function bandOf(n) { for (var i = 0; i < BANDS.length; i++) if (n >= BANDS[i].from && n <= BANDS[i].to) return BANDS[i]; return BANDS[BANDS.length - 1]; }
+  function lvColor(n) { return bandOf(n).c; }
+  var openBands = {};   // 사용자가 접거나 펼친 대역(저장하지 않음). 정하지 않은 대역은 현재 레벨이 있는 대역만 펼친다
   function openedMsg(n) { return "새 레벨이 열렸어요! (" + lvName(n) + ")"; }   // 숫자 뒤 조사(이/가)를 피하려고 괄호로 쓴다
 
   // v0.37: 다음 레벨을 열려면 필수 모드 모두 A 이상(듣기는 영어 음성이 없는 기기에서 제외) + 틀린 단어 0개
@@ -18,36 +32,60 @@
     return out;
   }
 
-  // 잠긴 레벨 카드 안내: 모드를 다 채웠고 복습만 남았으면 남은 복습 수, 아니면 모드 달성 수
-  function needText(n) {
-    var pv = n - 1, req = requiredModes(), c = EJ.modesCleared(pv, req), left = EJ.reviewLeft(pv);
-    if (c === req.length && left > 0) return "틀린 단어 복습 " + left + "개 남음";
-    return lvName(pv) + " 모든 모드 A 이상 (" + c + "/" + req.length + ")";
+  // 가장 높게 열린 레벨(현재 레벨)
+  function frontierLv() {
+    var p = EJ.get("progress"), f = 1;
+    for (var n = 1; n <= LV_COUNT; n++) if (p.lvs[String(n)].unlocked) f = n;
+    return f;
   }
 
-  // 홈: 열린 레벨 카드(최고 등급)와 다음 잠긴 레벨 1개, 틀린 단어 개수(v0.37에서 레벨 선택 화면으로 개선 예정)
-  function renderHome() {
-    var p = EJ.get("progress");
-    var html = "";
-    for (var n = 1; n <= LV_COUNT; n++) {
+  // 잠긴 레벨 카드를 눌렀을 때 안내(현재 레벨 기준: 거기서부터 차례대로 열린다)
+  function lockMsg() {
+    var f = frontierLv(), req = requiredModes(), c = EJ.modesCleared(f, req), left = EJ.reviewLeft(f);
+    if (c === req.length && left > 0) showToast("틀린 단어 복습 " + left + "개를 마쳐야 해요", lvName(f) + " 모드는 모두 달성했어요");
+    else showToast(lvName(f) + " 모든 모드 A 이상이 필요해요", "모드 " + c + "/" + req.length + " 달성");
+  }
+
+  // 홈: 현재 레벨 주변만 표시 — 이전 대역은 접힌 막대(눌러 펼침), 현재 대역은 열린 레벨 + 다음 레벨 1개, 다음 대역은 잠긴 막대 1개(현재 대역의 마지막 레벨이면 그 대역의 첫 레벨 1개도), 그 뒤 대역은 숨김. keepScroll이면 현재 레벨로 스크롤하지 않는다
+  function renderHome(keepScroll) {
+    var p = EJ.get("progress"), req = requiredModes(), f = frontierLv(), curB = bandOf(f), html = "", n;
+    var curIdx = BANDS.indexOf(curB);
+    function card(n) {
       var st = p.lvs[String(n)];
       if (st.unlocked) {
-        html += '<button class="chunk stage" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
+        return '<button class="chunk stage' + (n === f ? " now" : "") + '" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
           '<span class="tile pop">' + n + '</span>' +
-          '<span class="txt"><div class="name">' + lvName(n) + '</div><div class="meta">' + (st.best ? "모드 " + EJ.modesCleared(n, requiredModes()) + "/" + requiredModes().length + " 달성" : "기록 없음") + '</div></span>' +
+          '<span class="txt"><div class="name">' + lvName(n) + (n === f ? '<span class="nowchip">지금</span>' : "") + '</div><div class="meta">' + (st.best ? "모드 " + EJ.modesCleared(n, req) + "/" + req.length + " 달성" : "기록 없음") + '</div></span>' +
           '<span class="grade' + (st.best ? "" : " none") + '">' + (st.best ? st.best : "-") + '</span></button>';
-      } else {
-        html += '<button class="chunk stage locked" disabled>' +
-          '<span class="tile pop">' + n + '</span>' +
-          '<span class="txt"><div class="name">' + lvName(n) + '</div><div class="meta">' + needText(n) + '</div></span>' +
-          '<svg class="ic lock"><use href="#i-lock"/></svg></button>';
-        break;   // 열림은 순서대로라 다음 잠긴 카드 1개만 보여 준다
       }
+      return '<button class="chunk stage locked" data-lock="' + n + '" aria-disabled="true" aria-label="' + lvName(n) + ' 잠김">' +
+        '<span class="tile pop">' + n + '</span>' +
+        '<span class="txt"><div class="name">' + lvName(n) + '</div></span>' +
+        '<svg class="ic lock"><use href="#i-lock"/></svg></button>';
     }
-    document.getElementById("stage-list").innerHTML = html;
+    for (var bi = 0; bi <= curIdx + 1 && bi < BANDS.length; bi++) {
+      var b = BANDS[bi], cnt = 0, total = b.to - b.from + 1;
+      for (n = b.from; n <= b.to; n++) if (p.lvs[String(n)].unlocked) cnt++;
+      var title = '<span class="bt"><span class="bl1"><span class="bn">' + b.name + '</span><span class="be">' + b.en + '</span></span>';
+      if (bi === curIdx + 1) {   // 다음 대역: 잠긴 막대
+        html += '<button class="band locked" data-lock="' + b.from + '" aria-disabled="true" style="--c:' + b.c + '">' + title +
+          '<span class="bl2">레벨 ' + b.from + '~' + b.to + ' · 잠김</span></span><svg class="ic lock"><use href="#i-lock"/></svg></button>';
+        if (f === curB.to) html += card(b.from);   // 현재 대역을 다 열었으면 다음 레벨(다음 대역의 첫 레벨)을 보여 준다
+        continue;
+      }
+      var isOpen = openBands[b.id] === undefined ? bi === curIdx : openBands[b.id];
+      html += '<button class="band' + (isOpen ? " open" : "") + '" data-band="' + b.id + '" aria-expanded="' + isOpen + '" style="--c:' + b.c + '">' + title +
+        '<span class="bl2">레벨 ' + b.from + '~' + b.to + ' · 열림 ' + cnt + '/' + total + '</span></span><svg class="ic chev"><use href="#i-back"/></svg></button>';
+      if (!isOpen) continue;
+      var last = bi === curIdx ? Math.min(b.to, f + 1) : b.to;   // 현재 대역은 열린 레벨 + 다음 레벨 1개까지
+      for (n = b.from; n <= last; n++) html += card(n);
+    }
+    var list = document.getElementById("stage-list");
+    list.innerHTML = html;
     var rvN = EJ.get("review").items.length;
     document.getElementById("rv-count").textContent = String(rvN);
     document.getElementById("rv-guide").style.display = rvN > 0 ? "" : "none";
+    if (!keepScroll) setTimeout(function () { var now = list.querySelector(".stage.now"); if (now && now.scrollIntoView) now.scrollIntoView({ block: "center" }); }, 0);   // 브라우저가 새로고침 때 스크롤을 복원한 뒤에 이동
   }
 
   var WMAP = null;
@@ -660,6 +698,15 @@
     var cb = t.closest("button");   // 버튼 클릭 효과음(정답 고르기·듣기·결과 보기는 다른 소리가 나므로 제외)
     if (cb && !cb.disabled && !(cb.parentNode && cb.parentNode.id === "g-opts" && !spell) && cb.id !== "g-spk" &&
         !(cb.id === "g-next" && cb.textContent === "결과 보기")) sfx("click");
+    var bd = t.closest("[data-band]");
+    if (bd) {   // 대역 접기·펼치기(저장하지 않음)
+      var bid = bd.dataset.band;
+      openBands[bid] = !bd.classList.contains("open");
+      renderHome(true);
+      var nb2 = document.querySelector('[data-band="' + bid + '"]'); if (nb2) nb2.focus();
+      return;
+    }
+    if (t.closest("[data-lock]")) { lockMsg(); return; }
     var go = t.closest("[data-go]");
     if (go && !go.disabled) {
       if (go.dataset.stage) {
