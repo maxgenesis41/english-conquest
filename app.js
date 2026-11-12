@@ -22,7 +22,6 @@
   ];
   function bandOf(n) { for (var i = 0; i < BANDS.length; i++) if (n >= BANDS[i].from && n <= BANDS[i].to) return BANDS[i]; return BANDS[BANDS.length - 1]; }
   function lvColor(n) { return bandOf(n).c; }
-  var openBands = {};   // 사용자가 접거나 펼친 등급(저장하지 않음). 정하지 않은 등급은 현재 레벨이 있는 등급만 펼친다
   function openedMsg(n) { return "새 레벨이 열렸어요! (" + lvName(n) + ")"; }   // 숫자 뒤 조사(이/가)를 피하려고 괄호로 쓴다
 
   // v0.39: 다음 레벨을 열려면 경험치 칸을 모두 채우고(모드 1판 A 이상 = 1칸, 모드당 R=올림(√레벨)칸) 틀린 단어 0개. 듣기는 영어 음성이 없는 기기에서 제외
@@ -56,49 +55,41 @@
     else showToast(lvName(f) + " 경험치를 모두 채워야 해요", "경험치 " + x.cur + "/" + x.total + " (모드마다 A 이상 " + x.per + "회)");
   }
 
-  // 홈: 현재 레벨 주변만 표시 — 이전 등급은 접힌 막대(눌러 펼침), 현재 등급은 열린 레벨 + 다음 레벨 1개, 다음 등급은 잠긴 막대 1개(현재 등급의 마지막 레벨이면 그 등급의 첫 레벨 1개도), 그 뒤 등급은 숨김. keepScroll이면 현재 레벨로 스크롤하지 않는다
-  function renderHome(keepScroll) {
+  // 홈(v0.53, 고정 크기·스크롤 없음): 등급 하나의 레벨 10개를 2열×5행으로 보여 주고 ◀ ▶로 등급을 넘긴다(다음 등급 1개까지, 그 뒤는 숨김). 처음 열면 현재 레벨이 있는 등급이다. 선택한 등급은 저장하지 않는다
+  var viewBand = -1;   // -1이면 현재 등급
+  function renderHome() {
     betaFrom = betaStart();   // BETA-TEST
-    var p = EJ.get("progress"), req = requiredModes(), f = frontierLv(), curB = bandOf(f), html = "", n;
-    var curIdx = BANDS.indexOf(curB);
+    var p = EJ.get("progress"), req = requiredModes(), f = frontierLv(), curB = bandOf(f), n;
+    var curIdx = BANDS.indexOf(curB), maxView = Math.min(curIdx + 1, BANDS.length - 1);
+    if (viewBand < 0 || viewBand > maxView) viewBand = curIdx;
+    var b = BANDS[viewBand], cnt = 0, total = b.to - b.from + 1, html = "";
+    for (n = b.from; n <= b.to; n++) if (lvOpen(p, n)) cnt++;   // BETA-TEST: 원래는 p.lvs[..].unlocked
     function card(n) {
       var st = p.lvs[String(n)];
       if (lvOpen(p, n)) {   // BETA-TEST: 원래는 st.unlocked
+        var x = EJ.xp(n, req);
         return '<button class="chunk stage' + (n === f ? " now" : "") + '" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
           '<span class="tile pop">' + n + '</span>' +
-          '<span class="txt"><div class="name">' + lvName(n) + (n === f ? '<span class="nowchip">지금</span>' : "") + '</div><div class="meta">' + (st.best ? "경험치 " + EJ.xp(n, req).cur + "/" + EJ.xp(n, req).total : "기록 없음") + '</div></span>' +
-          '<span class="grade' + (st.best ? "" : " none") + '">' + (st.best ? st.best : "-") + '</span></button>';
+          '<span class="txt"><div class="meta">경험치</div><div class="xp">' + x.cur + "/" + x.total + '</div></span>' +
+          '<span class="grade' + (st.best ? "" : " none") + '">' + (st.best ? st.best : "-") + '</span>' + (n === f ? '<span class="nowchip">지금</span>' : "") + '</button>';
       }
       return '<button class="chunk stage locked" data-lock="' + n + '" aria-disabled="true" aria-label="' + lvName(n) + ' 잠김">' +
-        '<span class="tile pop">' + n + '</span>' +
-        '<span class="txt"><div class="name">' + lvName(n) + '</div></span>' +
-        '<svg class="ic lock"><use href="#i-lock"/></svg></button>';
+        '<span class="tile pop">' + n + '</span><svg class="ic lock"><use href="#i-lock"/></svg></button>';
     }
-    for (var bi = 0; bi <= curIdx + 1 && bi < BANDS.length; bi++) {
-      var b = BANDS[bi], cnt = 0, total = b.to - b.from + 1;
-      for (n = b.from; n <= b.to; n++) if (lvOpen(p, n)) cnt++;   // BETA-TEST: 원래는 p.lvs[..].unlocked
-      var title = '<span class="bt"><span class="bl1"><span class="bn">' + b.name + '</span><span class="be">' + b.en + '</span></span>';
-      if (bi === curIdx + 1) {   // 다음 등급: 잠긴 막대
-        html += '<button class="band locked" data-lock="' + b.from + '" aria-disabled="true" style="--c:' + b.c + '">' + title +
-          '<span class="bl2">레벨 ' + b.from + '~' + b.to + ' · 잠김</span></span><svg class="ic lock"><use href="#i-lock"/></svg></button>';
-        if (f === curB.to) html += card(b.from);   // 현재 등급을 다 열었으면 다음 레벨(다음 등급의 첫 레벨)을 보여 준다
-        continue;
-      }
-      var isOpen = openBands[b.id] === undefined ? bi === curIdx : openBands[b.id];
-      html += '<button class="band' + (isOpen ? " open" : "") + '" data-band="' + b.id + '" aria-expanded="' + isOpen + '" style="--c:' + b.c + '">' + title +
-        '<span class="bl2">레벨 ' + b.from + '~' + b.to + ' · 열림 ' + cnt + '/' + total + '</span></span><svg class="ic chev"><use href="#i-back"/></svg></button>';
-      if (!isOpen) continue;
-      var last = bi === curIdx ? Math.min(b.to, f + 1) : b.to;   // 현재 등급은 열린 레벨 + 다음 레벨 1개까지
-      for (n = b.from; n <= last; n++) html += card(n);
-    }
-    var list = document.getElementById("stage-list");
-    list.innerHTML = html;
+    for (n = b.from; n <= b.to; n++) html += card(n);
+    if (viewBand === 0) html += '<div class="stage empty" aria-hidden="true"></div>';   // 평민은 9개라 10번째 칸을 비운다
+    document.getElementById("stage-list").innerHTML = html;
+    var locked = cnt === 0;
+    document.getElementById("bandnav").innerHTML =
+      '<button class="arr pv" data-bandmove="-1" aria-label="이전 등급"' + (viewBand <= 0 ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button>' +
+      '<div class="cur' + (locked ? " locked" : "") + '" style="--c:' + b.c + '"><div class="l1"><span class="bn">' + b.name + '</span><span class="be">' + b.en + '</span><span class="pg">' + (viewBand + 1) + '/' + BANDS.length + '</span></div>' +
+      '<div class="l2">레벨 ' + b.from + '~' + b.to + ' · ' + (locked ? "잠김" : "열림 " + cnt + "/" + total) + '</div></div>' +
+      '<button class="arr nx" data-bandmove="1" aria-label="다음 등급"' + (viewBand >= maxView ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button>';
     var bb = document.getElementById("beta-badge");   // BETA-TEST
-    if (bb) { bb.style.display = betaFrom ? "" : "none"; bb.textContent = betaFrom ? "🧪 베타: " + bandOf(betaFrom).name + "(레벨 " + betaFrom + "~) 열림" : ""; }
+    if (bb) { bb.style.display = betaFrom ? "" : "none"; bb.innerHTML = betaFrom ? "🧪 베타<br>레벨 " + betaFrom + "~" : ""; bb.setAttribute("aria-label", betaFrom ? "베타: " + bandOf(betaFrom).name + "(레벨 " + betaFrom + "~) 열림" : ""); }
     var rvN = EJ.get("review").items.length;
     document.getElementById("rv-count").textContent = String(rvN);
     document.getElementById("rv-guide").style.display = rvN > 0 ? "" : "none";
-    if (!keepScroll) setTimeout(function () { var now = list.querySelector(".stage.now"); if (now && now.scrollIntoView) now.scrollIntoView({ block: "center" }); }, 0);   // 브라우저가 새로고침 때 스크롤을 복원한 뒤에 이동
   }
 
   var WMAP = null;
@@ -840,15 +831,22 @@
   function openExit() { pauseLimit(); $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
   function closeExit() { $("exit-modal").style.display = "none"; resumeLimit(); }
 
+  // 설정 탭(v0.52): 화면 표시만 바꾸고 저장하지 않는다
+  function setTab(k) {
+    var ts = document.querySelectorAll("#settings .tab"), ps = document.querySelectorAll("#settings .pane");
+    for (var i = 0; i < ts.length; i++) { var on = ts[i].dataset.tab === k; ts[i].classList.toggle("on", on); ts[i].setAttribute("aria-selected", on ? "true" : "false"); }
+    for (var q = 0; q < ps.length; q++) ps[q].classList.toggle("on", ps[q].id === "p-" + k);
+  }
+
   function show(name) {
     var screens = document.querySelectorAll(".screen");
     for (var i = 0; i < screens.length; i++) {
       screens[i].classList.toggle("on", screens[i].id === name);
     }
-    if (name === "home") renderHome();
+    if (name === "home") { viewBand = -1; renderHome(); }
     if (name === "review") renderReview();
     if (name === "modes") renderModes();
-    if (name === "settings") renderSettings();
+    if (name === "settings") { setTab("game"); renderSettings(); }
     bgmSync();   // 게임 화면에서만 재생, 다른 화면으로 가면 정지
     window.scrollTo(0, 0);
   }
@@ -940,12 +938,9 @@
     var cb = t.closest("button");   // 버튼 클릭 효과음(정답 고르기·듣기·결과 보기는 다른 소리가 나므로 제외)
     if (cb && !cb.disabled && !(cb.parentNode && cb.parentNode.id === "g-opts" && !spell) && cb.id !== "g-spk" &&
         !(cb.id === "g-next" && cb.textContent === "결과 보기")) sfx("click");
-    var bd = t.closest("[data-band]");
-    if (bd) {   // 등급 접기·펼치기(저장하지 않음)
-      var bid = bd.dataset.band;
-      openBands[bid] = !bd.classList.contains("open");
-      renderHome(true);
-      var nb2 = document.querySelector('[data-band="' + bid + '"]'); if (nb2) nb2.focus();
+    var bm = t.closest("[data-bandmove]");
+    if (bm) {   // 등급 넘기기(저장하지 않음)
+      if (!bm.disabled) { viewBand += +bm.dataset.bandmove; renderHome(); var nb = document.querySelector('[data-bandmove="' + bm.dataset.bandmove + '"]'); if (nb && !nb.disabled) nb.focus(); }
       return;
     }
     if (t.closest("[data-lock]")) { lockMsg(); return; }
@@ -1018,6 +1013,8 @@
     rg.addEventListener("input", function () { var v = +rg.value; rg.style.setProperty("--p", v + "%"); $("bgm-vol-val").textContent = v + "%"; bgmPreview(v); });
     rg.addEventListener("change", function () { EJ.setSetting("bgmVol", +rg.value); });
   })();
+
+  document.querySelector("#settings .tabs").addEventListener("click", function (e) { var t = e.target.closest(".tab"); if (t) setTab(t.dataset.tab); });   // 설정 탭
 
   $("beta-band").addEventListener("change", function () { EJ.setSetting("betaBand", $("beta-band").value); });   // BETA-TEST
 
