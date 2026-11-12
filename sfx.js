@@ -51,9 +51,24 @@ var SFX = (function () {
     } catch (e) { failed = true; return null; }
   }
 
-  // name: click / correct / wrong / combo / clear / over / tick(주황) / tickfast(빨강). 재생을 시작했으면 true
+  // v0.46 콤보 정답음: correct3·correct5·correct10 = 기본 정답음을 반음 단위로 올리고 반짝음을 얹는다(연속 3·5·10회 단계)
+  var TIER = { 3: { r: 1.122, sp: 1 }, 5: { r: 1.26, sp: 2 }, 10: { r: 1.498, sp: 3 } };   // r: 음높이 배율(+2·+4·+7반음), sp: 반짝음 개수
+  var SPARK = [1.26, 1.498, 2], SPARK_MAX = 3600;   // 반짝음 높이: 주된 음 위 장3도·완전5도·옥타브(너무 날카롭지 않게 상한 둠)
+  function tierNotes(base, tier) {
+    var T = TIER[tier], out = [], i, top = 0, maxAmp = 0, n;
+    for (i = 0; i < base.length; i++) maxAmp = Math.max(maxAmp, base[i][4] || 0.3);
+    for (i = 0; i < base.length; i++) {
+      n = base[i].slice(); n[0] = Math.min(SPARK_MAX, n[0] * T.r); if (n[5]) n[5] = Math.min(SPARK_MAX, n[5] * T.r); out.push(n);
+      if ((base[i][4] || 0.3) >= maxAmp * 0.5) top = Math.max(top, n[0]);   // 주된 음(작은 배음 제외) 중 가장 높은 음
+    }
+    for (i = 0; i < T.sp; i++) out.push([Math.min(SPARK_MAX, top * SPARK[i]), 0.12 + i * 0.07, 0.1, base[0][3], maxAmp * 0.6]);
+    return out;
+  }
+
+  // name: click / correct / correct3·5·10(콤보 단계) / wrong / combo / clear / over / tick(주황) / tickfast(빨강). 재생을 시작했으면 true
   function play(name, style) {
-    var set = SETS[style] || SETS.retro, notes = set.s[name];
+    var set = SETS[style] || SETS.retro, notes = set.s[name], m = /^correct(3|5|10)$/.exec(name);
+    if (m) notes = tierNotes(set.s.correct, +m[1]);
     if (!notes) return false;
     var c = ac(); if (!c) return false;
     try {
@@ -74,5 +89,5 @@ var SFX = (function () {
     } catch (e) { return false; }
   }
 
-  return { play: play, STYLES: STYLES };
+  return { play: play, STYLES: STYLES, tierNotes: tierNotes, SETS: SETS };
 })();

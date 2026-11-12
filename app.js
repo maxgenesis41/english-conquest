@@ -527,7 +527,7 @@
   // 정답/오답 공통 표시: 점수·연속·체력·안내 문구·다음 버튼
   function feedback(r, q, wrongText) {
     freezeLimit();
-    sfx(r.correct ? (!cur.review && cur.combo > 0 && cur.combo % 3 === 0 ? "combo" : "correct") : "wrong");   // 연속 정답 3·6·9회째는 combo 소리
+    sfx(r.correct ? (!cur.review && cur.combo >= 3 ? "correct" + comboTier(cur.combo) : "correct") : "wrong");   // v0.46: 연속 3·5·10회 단계(복습 제외)마다 정답음이 높아진다
     $("g-hint").disabled = true;
     $("g-score").textContent = String(cur.score);
     $("g-combo").textContent = String(cur.combo);
