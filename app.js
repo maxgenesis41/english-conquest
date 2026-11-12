@@ -227,7 +227,7 @@
     $("g-bar").style.width = (cur.index * 100 / cur.total) + "%";
     $("g-combo").textContent = String(cur.combo);
     var hb = $("g-hint");
-    hb.textContent = "힌트 " + cur.hintsLeft;
+    renderHint();
     hb.disabled = cur.hintsLeft <= 0;
     $("g-say").textContent = "";
     $("g-next").style.display = "none";
@@ -461,7 +461,7 @@
       for (i = 0; i < seq.length; i++) used[seq[i].t] = true;
       var want = correctAt(seq.length);
       for (i = 0; i < arr.length; i++) if (!used[i] && arr[i] === want) { seq.push({ t: i, lock: true }); break; }
-      var hb2 = $("g-hint"); hb2.textContent = "힌트 " + cur.hintsLeft; hb2.disabled = true;
+      var hb2 = $("g-hint"); renderHint(); hb2.disabled = true;
       renderSpell();
       if (seq.length === arr.length) spellFinish();
       return;
@@ -471,7 +471,7 @@
     var opts = $("g-opts").querySelectorAll(".opt");
     for (var k = 0; k < rem.length; k++) { opts[rem[k]].disabled = true; opts[rem[k]].classList.add("dim"); }
     var hb = $("g-hint");
-    hb.textContent = "힌트 " + cur.hintsLeft;
+    renderHint();
     hb.disabled = true;
   }
 
@@ -503,6 +503,16 @@
     sfx("clear");
     $("res-modal").style.display = "grid";
     (left ? nb : $("r-modes")).focus();
+  }
+
+  // 힌트 버튼: 열쇠 아이콘을 그 레벨의 판당 힌트 수만큼 보여 주고, 남은 것은 컬러·사용한 것은 오른쪽부터 회색(v0.41). 힌트가 없는 레벨(Lv90~99)은 사선 열쇠 1개
+  function renderHint() {
+    var hb = $("g-hint"), left = cur.hintsLeft, max = cur.hintsMax, html = "", i;
+    if (max <= 0) html = '<svg class="hi used" aria-hidden="true"><use href="#i-key"/><path class="slash" d="M5 28L28 5"/></svg>';
+    else for (i = 0; i < max; i++) html += '<svg class="hi' + (i >= left ? " used" : "") + '" aria-hidden="true"><use href="#i-key"/></svg>';
+    hb.innerHTML = html;
+    hb.classList.toggle("nohint", max <= 0);
+    hb.setAttribute("aria-label", max <= 0 ? "힌트 없음" : "힌트 " + left + "개 남음");
   }
 
   // 한 판이 끝날 때 한 번만 저장

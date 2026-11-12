@@ -153,6 +153,15 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 .say.good { background: #E4F6E4; }
 .say.bad { background: #FFE6E8; }
 .hint:disabled { opacity: .4; cursor: default; }
+/* v0.41: 힌트 버튼은 열쇠 아이콘(판당 힌트 수만큼, 남은 것은 컬러·사용한 것은 오른쪽부터 회색) */
+.hint.keys { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.hint.keys:disabled { opacity: .78; }   /* 한 문제에 한 번만 쓸 수 있어 사용 직후 눌림 방지 상태여도 남은 열쇠(컬러)와 사용한 열쇠(회색)가 구분되게 */
+.foot .hint.keys { padding: 0 12px; }
+.hint .hi { width: 28px; height: 28px; flex: none; display: block; overflow: visible; }
+.hint .hi.used { --kf: #E3EBF7; --kh: #E3EBF7; --ks: #A9B6CC; }
+.hint .hi.used use { opacity: .7; }
+.hint .hi path.slash { stroke: #24336B; stroke-width: 2.6; stroke-linecap: round; fill: none; }
+.hint.nohint, .hint.nohint:disabled { opacity: 1; background: #FFE7A6; border-color: #A9B6CC; box-shadow: 0 5px 0 #A9B6CC; }
 .next { margin-top: 18px; }
 #modes-note .say { margin: 0 0 14px; }
 

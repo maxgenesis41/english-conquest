@@ -1,6 +1,6 @@
 // 영어정복 3단계: 게임 규칙 엔진 (화면과 분리, 저장도 하지 않음)
 // 규칙: 작업지침 7항 / 설계.md 1항
-//  - 한 판 10문제, 체력 5, 힌트 3회
+//  - 한 판 10문제, 체력 5, 힌트는 레벨별(v0.40): Lv1~29 3회·Lv30~59 2회·Lv60~89 1회·Lv90~99 0회(복습 판은 기존 3회 유지, 화면에서 힌트 없음)
 //  - 정답 100점 + 연속 정답 보너스(2회째부터 +10씩, 최대 +50), 힌트 쓴 문제는 점수(보너스 포함) 절반
 //  - 오답 시 체력 -1, 연속 정답 3회마다 체력 +1(최대 5), 체력 0이면 즉시 종료
 //  - 등급: 정답 10개 S, 9개 A, 7~8개 B, 6개 이하 C (체력 0 종료도 C)
@@ -10,6 +10,12 @@ var Game = (function () {
 
   var TOTAL = 10, MAX_HP = 5, HINTS = 3;
   var LETTERS = "abcdefghijklmnopqrstuvwxyz";
+
+  // 레벨별 판당 힌트 수(v0.40): 레벨이 오를수록 줄어든다
+  function hintsFor(lv) {
+    if (typeof lv !== "number" || !(lv >= 30)) return HINTS;   // 잘못된 값(NaN 등)도 기본 3회
+    return lv < 60 ? 2 : lv < 90 ? 1 : 0;
+  }
 
   function randInt(n, rng) { return Math.floor(rng() * n); }
 
@@ -86,10 +92,11 @@ var Game = (function () {
               o.mode === "sentence" ? sentenceQuestion(picked[i], rng) :
               o.mode === "listen" ? listenQuestion(picked[i], pool, rng) : meaningQuestion(picked[i], pool, rng));
     }
+    var hs = o.review ? HINTS : hintsFor(o.lv);   // 복습 판은 기존 값 유지
     return {
       lv: o.lv, mode: o.mode, questions: qs, index: 0, total: total, review: !!o.review,
       hp: MAX_HP, score: 0, combo: 0, bestCombo: 0, correct: 0, answered: 0,
-      hintsLeft: HINTS, hintUsed: false, removed: [], picked: null,
+      hintsLeft: hs, hintsMax: hs, hintUsed: false, removed: [], picked: null,
       ending: false, over: false, finished: false, correctIds: [], wrongIds: []
     };
   }
@@ -140,14 +147,14 @@ var Game = (function () {
     return judge(g, q, s, g.mode === "spell" ? s.toLowerCase() === q.answer : s === q.answer);
   }
 
-  // 순서 모드 힌트: 사용 처리만 한다(채울 글자·단어는 화면이 정답에서 가져옴). 문제당 1번, 판당 3번
+  // 순서 모드 힌트: 사용 처리만 한다(채울 글자·단어는 화면이 정답에서 가져옴). 문제당 1번, 판당 횟수는 레벨별(hintsFor)
   function hintSpell(g) {
     if (!g || g.finished || g.picked !== null || !isOrder(g) || g.hintsLeft <= 0 || g.hintUsed) return false;
     g.hintsLeft--; g.hintUsed = true;
     return true;
   }
 
-  // 힌트: 오답 보기 2개를 지운다. 문제당 1번, 판당 3번. 지워진 보기 번호 배열을 돌려준다
+  // 힌트: 오답 보기 2개를 지운다. 문제당 1번, 판당 횟수는 레벨별(hintsFor). 지워진 보기 번호 배열을 돌려준다
   function hint(g, rng) {
     if (!g || g.finished || g.picked !== null || g.hintsLeft <= 0 || g.hintUsed) return null;
     var q = current(g), wrong = [];
@@ -178,8 +185,8 @@ var Game = (function () {
   }
 
   function result(g) {
-    return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: HINTS - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice(), total: g.total, review: g.review };
+    return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: g.hintsMax - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice(), total: g.total, review: g.review };
   }
 
-  return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
+  return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, hintsFor: hintsFor, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
 })();

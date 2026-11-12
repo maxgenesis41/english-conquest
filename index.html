@@ -17,6 +17,7 @@
   <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0110 0v3h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1zm2 0h6V7a3 3 0 00-6 0v3z"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15.5 3.5L7 12l8.5 8.5 2.5-2.5L12 12l6-6z"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><g><rect x="10" y="1.5" width="4" height="5" rx="1"/><rect x="10" y="17.5" width="4" height="5" rx="1"/><rect x="1.5" y="10" width="5" height="4" rx="1"/><rect x="17.5" y="10" width="5" height="4" rx="1"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(45 12 12)"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(135 12 12)"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(225 12 12)"/><rect x="10" y="1.5" width="4" height="5" rx="1" transform="rotate(315 12 12)"/><circle cx="12" cy="12" r="7.2"/></g><circle cx="12" cy="12" r="3" fill="#fff"/></symbol>
+  <symbol id="i-key" viewBox="0 0 32 32"><g transform="rotate(90 16 16)" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16L27 27M22.5 22.5l3.2-3.2M25.8 25.8l3-3" fill="none" style="stroke:var(--ks,#24336B)" stroke-width="7"/><path d="M16 16L27 27M22.5 22.5l3.2-3.2M25.8 25.8l3-3" fill="none" style="stroke:var(--kf,#FF8F3A)" stroke-width="3"/><circle cx="11" cy="11" r="7" style="fill:var(--kf,#FF8F3A);stroke:var(--ks,#24336B)" stroke-width="2.4"/><circle cx="9" cy="9" r="2.4" style="fill:var(--kh,#fff);stroke:var(--ks,#24336B)" stroke-width="1.8"/></g></symbol>
   <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 2s1 4-2 7c-2 2-4 4-4 8a6 6 0 0012 0c0-3-1.5-5-2.5-6 0 2-1 3-2 3 1-3 0-8-1.5-12z"/></symbol>
 </svg>
 <div class="app">
@@ -30,7 +31,7 @@
     </div>
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
-    <p class="ver">v0.39</p>
+    <p class="ver">v0.41</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -59,7 +60,7 @@
     <div class="opts" id="g-opts"></div>
     <div id="g-say"></div>
     <div class="foot" id="g-foot">
-      <button class="hint" id="g-hint">힌트 3</button>
+      <button class="hint keys" id="g-hint" aria-label="힌트"></button>
       <button class="erase" id="g-erase" style="display:none" disabled>지우기</button>
       <span class="combo"><svg class="ic"><use href="#i-fire"/></svg>연속 <span id="g-combo">0</span></span>
     </div>
