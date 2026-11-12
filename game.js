@@ -96,12 +96,25 @@ var Game = (function () {
     return {
       lv: o.lv, mode: o.mode, questions: qs, index: 0, total: total, review: !!o.review,
       hp: MAX_HP, score: 0, combo: 0, bestCombo: 0, correct: 0, answered: 0,
-      hintsLeft: hs, hintsMax: hs, hintUsed: false, removed: [], picked: null,
+      hintsLeft: hs, hintsMax: hs, limit: o.review ? 0 : limitFor(o.lv, o.mode), hintUsed: false, removed: [], picked: null,
       ending: false, over: false, finished: false, correctIds: [], wrongIds: []
     };
   }
 
   function current(g) { return g.questions[g.index]; }
+
+  // 제한시간(초): 선택형(글자·뜻·듣기) Lv1~9 없음·10~29 20초·30~59 15초·60~89 12초·90~99 10초, 입력형(철자·문장)은 2배. 복습·알 수 없는 레벨은 0(제한 없음)
+  function limitFor(lv, mode) {
+    if (typeof lv !== "number" || !(lv >= 10)) return 0;
+    var s = lv < 30 ? 20 : lv < 60 ? 15 : lv < 90 ? 12 : 10;
+    return (mode === "spell" || mode === "sentence") ? s * 2 : s;
+  }
+
+  // 시간 초과: 아직 답하지 않았으면 오답으로 채점한다(체력 -1, 틀린 단어 기록). 이미 답했으면 null
+  function timeout(g) {
+    if (!g || g.finished || g.picked !== null) return null;
+    return judge(g, current(g), -1, false);
+  }
 
   // 보기 선택. 이미 답했거나 지워진 보기면 null
   function pick(g, i) {
@@ -188,5 +201,5 @@ var Game = (function () {
     return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: g.hintsMax - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice(), total: g.total, review: g.review };
   }
 
-  return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, hintsFor: hintsFor, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
+  return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, hintsFor: hintsFor, limitFor: limitFor, timeout: timeout, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
 })();

@@ -8,6 +8,8 @@ var SFX = (function () {
   var SETS = {
     retro: { boost: 1.5, s: {
       click: [[1200, 0, 0.04, "square", 0.12]],
+      tick: [[1500, 0, 0.03, "square", 0.1]],
+      tickfast: [[2100, 0, 0.03, "square", 0.14]],
       correct: [[988, 0, 0.07, "square", 0.13], [1319, 0.07, 0.16, "square", 0.13]],
       wrong: [[200, 0, 0.1, "square", 0.14], [150, 0.1, 0.18, "square", 0.14]],
       combo: [[523, 0, 0.05, "square", 0.12], [659, 0.05, 0.05, "square", 0.12], [784, 0.1, 0.05, "square", 0.12], [1047, 0.15, 0.05, "square", 0.12], [1319, 0.2, 0.15, "square", 0.13]],
@@ -16,6 +18,8 @@ var SFX = (function () {
     } },
     bright: { boost: 1, s: {
       click: [[880, 0, 0.06, "triangle", 0.25, 1320]],
+      tick: [[1000, 0, 0.04, "triangle", 0.22, 800]],
+      tickfast: [[1500, 0, 0.04, "triangle", 0.32, 1100]],
       correct: [[1047, 0, 0.1, "triangle", 0.3], [1319, 0.09, 0.18, "triangle", 0.3], [2093, 0.09, 0.12, "sine", 0.08]],
       wrong: [[260, 0, 0.22, "sawtooth", 0.18, 170], [180, 0.12, 0.2, "sawtooth", 0.14, 120]],
       combo: [[784, 0, 0.07, "triangle", 0.28], [988, 0.07, 0.07, "triangle", 0.28], [1175, 0.14, 0.07, "triangle", 0.28], [1568, 0.21, 0.2, "triangle", 0.3]],
@@ -24,6 +28,8 @@ var SFX = (function () {
     } },
     chime: { boost: 1, s: {
       click: [[660, 0, 0.08, "sine", 0.22]],
+      tick: [[880, 0, 0.07, "sine", 0.18]],
+      tickfast: [[1320, 0, 0.07, "sine", 0.28]],
       correct: [[1047, 0, 0.35, "sine", 0.28], [2094, 0, 0.2, "sine", 0.08], [1568, 0.12, 0.4, "sine", 0.26], [3136, 0.12, 0.2, "sine", 0.06]],
       wrong: [[330, 0, 0.3, "sine", 0.3, 247], [311, 0.02, 0.3, "triangle", 0.1, 233]],
       combo: [[880, 0, 0.25, "sine", 0.24], [1109, 0.08, 0.25, "sine", 0.24], [1319, 0.16, 0.3, "sine", 0.24], [1760, 0.24, 0.45, "sine", 0.26]],
@@ -45,7 +51,7 @@ var SFX = (function () {
     } catch (e) { failed = true; return null; }
   }
 
-  // name: click / correct / wrong / combo / clear / over. 재생을 시작했으면 true
+  // name: click / correct / wrong / combo / clear / over / tick(주황) / tickfast(빨강). 재생을 시작했으면 true
   function play(name, style) {
     var set = SETS[style] || SETS.retro, notes = set.s[name];
     if (!notes) return false;

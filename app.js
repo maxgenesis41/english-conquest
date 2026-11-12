@@ -179,11 +179,98 @@
     if (!cur || cur.mode !== "listen") return;
     var q = Game.current(cur), b = $("g-spk");
     if (!b) return;
-    function off() { if (playTimer) { clearTimeout(playTimer); playTimer = null; } b.classList.remove("on"); }
+    function off() { if (playTimer) { clearTimeout(playTimer); playTimer = null; } b.classList.remove("on"); beginLimit(); }
     b.classList.add("on");
     if (playTimer) clearTimeout(playTimer);
     playTimer = setTimeout(off, 4000);
     if (!Sound.ok() || !Sound.speak(q.en, null, off)) off();
+  }
+
+  // ===== 제한시간 (v0.42): 문제마다 시간 제한. 끄면(설정) 없음. 복습·Lv1~9는 제한 없음 =====
+  var tm = null;   // {ms, left, end, iv, started, done, paused, sec}
+  function drawLimit() {
+    var row = $("g-tmr"); if (!tm || !row) return;
+    var left = tm.started ? Math.max(0, tm.paused ? tm.left : tm.end - Date.now()) : tm.ms;
+    var sec = Math.ceil(left / 1000);
+    var crit = tm.started && left <= Math.max(3000, tm.ms * 0.25), warn = tm.started && left <= tm.ms * 0.5;
+    row.classList.toggle("wait", !tm.started);
+    row.classList.toggle("crit", crit);
+    row.classList.toggle("warn", warn && !crit);
+    row.classList.toggle("blink", tm.started && left <= 3000 && left > 0 && !tm.done);
+    $("g-tbar").style.width = (tm.started ? left * 100 / tm.ms : 100) + "%";
+    $("g-tsec").textContent = tm.started ? sec + "초" : "대기";
+    if (tm.sec !== sec || tm.waitShown !== !tm.started) {
+      tm.sec = sec; tm.waitShown = !tm.started;
+      row.setAttribute("aria-label", tm.started ? "남은 시간 " + sec + "초" : "소리가 끝나면 시간이 시작돼요");
+    }
+  }
+  function tickLimit() {
+    if (!tm || tm.done || tm.paused) return;
+    if (tm.end - Date.now() <= 0) { drawLimit(); tm.done = true; stopIv(); onTimeout(); return; }
+    drawLimit();
+    tickSound();
+  }
+  // 째깍 소리(v0.43): 초록 무소리, 주황 초당 1회, 빨강 초당 3→5회로 점점 빨라짐. 효과음·무음 설정은 sfx()가 따른다
+  function tickSound() {
+    if (!tm || !tm.started || tm.done || tm.paused) return;
+    var left = Math.max(0, tm.end - Date.now()), now = Date.now();
+    var span = Math.max(3000, tm.ms * 0.25), zone = left <= span ? 2 : left <= tm.ms * 0.5 ? 1 : 0;
+    if (zone !== tm.zone) { tm.zone = zone; tm.nextTick = 0; }
+    if (!zone || now < tm.nextTick) return;
+    var gap = zone === 1 ? 1000 : 1000 / (3 + 2 * (1 - left / span));
+    sfx(zone === 1 ? "tick" : "tickfast");
+    tm.nextTick = (tm.nextTick && now - tm.nextTick < gap ? tm.nextTick : now) + gap;
+  }
+  function stopIv() { if (tm && tm.iv) { clearInterval(tm.iv); tm.iv = null; } }
+  function beginLimit() {
+    if (!tm || tm.started || tm.done) return;
+    tm.started = true; tm.end = Date.now() + tm.left;
+    tm.iv = setInterval(tickLimit, 50);
+    drawLimit();
+  }
+  function freezeLimit() { if (tm) { stopIv(); tm.done = true; if (tm.started) tm.left = Math.max(0, tm.end - Date.now()); tm.paused = false; drawLimit(); } }
+  function pauseLimit() { if (tm && tm.started && !tm.done && !tm.paused) { tm.left = Math.max(0, tm.end - Date.now()); tm.paused = true; stopIv(); } }
+  function resumeLimit() { if (tm && tm.paused && !tm.done) { tm.paused = false; tm.end = Date.now() + tm.left; tm.iv = setInterval(tickLimit, 50); } }
+  function setupLimit() {
+    stopIv(); tm = null;
+    var row = $("g-tmr");
+    row.classList.remove("wait", "warn", "crit", "blink");
+    if (!cur || !cur.limit || EJ.get("settings").timer === false) { row.style.display = "none"; return; }
+    tm = { ms: cur.limit * 1000, left: cur.limit * 1000, end: 0, iv: null, started: false, done: false, paused: false, sec: -1, zone: 0, nextTick: 0 };
+    row.style.display = "flex";
+    if (cur.mode === "listen") drawLimit();   // 듣기: 문제 소리가 끝나면 시작(speakCurrent의 off에서 beginLimit)
+    else beginLimit();
+  }
+  // 시간 초과: 오답 처리(체력 -1·틀린 단어 기록), 정답을 보여 주고 다음으로
+  function onTimeout() {
+    if (!cur || cur.picked != null || cur.finished) return;
+    var q = Game.current(cur), r = Game.timeout(cur), i;
+    if (!r) return;
+    var ans;
+    if (spell) {
+      if (cur.mode === "sentence") {
+        var chips = $("g-sent").children;
+        for (i = 0; i < chips.length; i++) chips[i].className = "wd bad";
+        $("g-sent").classList.add("done");
+      } else {
+        var slots = $("g-slots").children;
+        for (i = 0; i < slots.length; i++) slots[i].className = "bad";
+      }
+      var bx = $("g-opts").children;
+      for (i = 0; i < bx.length; i++) { bx[i].disabled = true; bx[i].className = "opt used"; }
+      $("g-erase").disabled = true;
+      ans = cur.mode === "sentence" ? "\"" + q.en + "\"" : q.en;
+    } else {
+      var opts = $("g-opts").querySelectorAll(".opt");
+      for (i = 0; i < opts.length; i++) {
+        opts[i].disabled = true;
+        opts[i].classList.add(i === q.answer ? "right" : "dim");
+      }
+      if (cur.mode === "letter") { var tl = $("g-tiles").children[q.blank]; tl.textContent = q.options[q.answer]; tl.className = "bad"; }
+      if (cur.mode === "listen") $("g-card").appendChild(el("div", "reveal", q.en + " = " + q.ko));
+      ans = q.en + " = " + q.ko;
+    }
+    feedback(r, q, "시간이 다 됐어요. 정답: " + ans);
   }
 
   var spell = null;     // 철자 쓰기 진행: {seq:[{t:타일번호, lock:힌트로 채움}]}
@@ -231,6 +318,7 @@
     hb.disabled = cur.hintsLeft <= 0;
     $("g-say").textContent = "";
     $("g-next").style.display = "none";
+    setupLimit();
     var isSpell = cur.mode === "spell", isSent = cur.mode === "sentence", isOrder = isSpell || isSent;
     $("g-erase").style.display = isOrder ? "" : "none";
     spell = isOrder ? { seq: [] } : null;
@@ -395,6 +483,7 @@
 
   // 정답/오답 공통 표시: 점수·연속·체력·안내 문구·다음 버튼
   function feedback(r, q, wrongText) {
+    freezeLimit();
     sfx(r.correct ? (!cur.review && cur.combo > 0 && cur.combo % 3 === 0 ? "combo" : "correct") : "wrong");   // 연속 정답 3·6·9회째는 combo 소리
     $("g-hint").disabled = true;
     $("g-score").textContent = String(cur.score);
@@ -612,8 +701,8 @@
   }
   function closeRes() { $("res-modal").style.display = "none"; }
 
-  function openExit() { $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
-  function closeExit() { $("exit-modal").style.display = "none"; }
+  function openExit() { pauseLimit(); $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
+  function closeExit() { $("exit-modal").style.display = "none"; resumeLimit(); }
 
   function show(name) {
     var screens = document.querySelectorAll(".screen");
@@ -628,14 +717,14 @@
   }
 
   // 설정 화면: 저장된 값을 읽어 스위치·스타일을 표시한다(읽기만 하고 저장하지 않음)
-  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word", "sw-result": "result" };
+  var SW_KEYS = { "sw-mute": "mute", "sw-sfx": "sfx", "sw-word": "word", "sw-result": "result", "sw-timer": "timer" };
   function renderSettings() {
     var s = EJ.get("settings");
     function sw(id, on, dis) {
       var b = $(id); b.className = "sw " + (on ? "on" : "off");
       b.setAttribute("aria-checked", on ? "true" : "false"); b.disabled = !!dis;
     }
-    sw("sw-mute", s.mute, false); sw("sw-sfx", s.sfx, s.mute); sw("sw-word", s.word, s.mute); sw("sw-result", s.result, false);
+    sw("sw-mute", s.mute, false); sw("sw-sfx", s.sfx, s.mute); sw("sw-word", s.word, s.mute); sw("sw-result", s.result, false); sw("sw-timer", s.timer !== false, false);
     var nr = document.querySelectorAll("#next-box .so");
     for (var q = 0; q < nr.length; q++) {
       var non = nr[q].dataset.next === s.next;
@@ -740,7 +829,7 @@
     if (t.closest("#g-next")) { next(); return; }
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
-    if (t.closest("#exit-yes")) { closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
+    if (t.closest("#exit-yes")) { freezeLimit(); tm = null; closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
     if (t.closest("#r-next")) { closeRes(); if (lastReview || $("r-next").dataset.act === "review") { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
     if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
     if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = lvName(lastStage); show("modes"); return; }
@@ -783,6 +872,7 @@
   });
 
   window.addEventListener("resize", refit);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) pauseLimit(); else if ($("exit-modal").style.display !== "grid") resumeLimit(); });
 
   var h = (location.hash || "#home").slice(1);
   show(h === "modes" || h === "review" || h === "settings" ? h : h === "wordbook" ? "review" : "home");

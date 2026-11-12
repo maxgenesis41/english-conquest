@@ -95,6 +95,18 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.12em; }
 .prog .bar { flex: 1; height: 16px; background: #fff; border: 3px solid var(--ink); border-radius: 999px; overflow: hidden; }
 .prog .bar div { height: 100%; background: var(--green); box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); }
 .prog b { font-size: 15px; min-width: 44px; text-align: right; }
+/* 제한시간 줄(v0.42): 진행 바 아래. 초록 → 주황(절반 이하) → 빨강(25% 이하·최소 3초), 마지막 3초는 깜빡임 */
+.tmr { display: flex; align-items: center; gap: 10px; margin: -6px 0 14px; --c: #4CCB4B; }
+.tmr .ck { width: 26px; height: 26px; flex: none; }
+.tmr .bar { flex: 1; height: 14px; background: #fff; border: 3px solid var(--ink); border-radius: 999px; overflow: hidden; }
+.tmr .bar div { height: 100%; background: var(--c); box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); }
+.tmr b { font-size: 15px; min-width: 44px; text-align: right; }
+.tmr.warn { --c: #FF8F3A; }
+.tmr.crit { --c: #FF5767; }
+.tmr.wait .bar div { background: #B7C3D6; }
+.tmr.blink .bar div { animation: tmrblink .5s steps(2, jump-none) infinite; }
+@keyframes tmrblink { 0% { opacity: 1; } 100% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .tmr.blink .bar div { animation: none; } }
 .q { padding: 18px 14px 22px; text-align: center; margin-bottom: 18px; }
 .q .tag { display: inline-block; font-size: 13px; font-weight: 700; background: var(--yellow); border: 3px solid var(--ink); border-radius: 999px; padding: 2px 14px; }
 .q .ko { font-size: 30px; font-weight: 700; margin: 14px 0 14px; }

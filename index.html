@@ -31,7 +31,7 @@
     </div>
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
-    <p class="ver">v0.41</p>
+    <p class="ver">v0.43</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -56,6 +56,7 @@
       <div class="score"><svg class="ic" style="color:#fff;filter:drop-shadow(0 1px 0 #24336B)"><use href="#i-star"/></svg><span id="g-score">0</span></div>
     </div>
     <div class="prog"><div class="bar"><div id="g-bar" style="width:0"></div></div><b id="g-count">1 / 10</b></div>
+    <div class="tmr" id="g-tmr" role="timer" aria-label="제한시간" style="display:none"><svg class="ck" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="11" fill="#fff" stroke="#24336B" stroke-width="2.6"/><path d="M16 10v7l4.5 3" fill="none" stroke="#24336B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3.5h8" stroke="#24336B" stroke-width="2.6" stroke-linecap="round"/></svg><div class="bar"><div id="g-tbar" style="width:100%"></div></div><b id="g-tsec">20초</b></div>
     <div class="chunk q" id="g-card"></div>
     <div class="opts" id="g-opts"></div>
     <div id="g-say"></div>
@@ -130,6 +131,7 @@
 
     <h2 class="sh">게임</h2>
     <div class="chunk set">
+      <div class="row"><div class="rt"><b>제한시간</b><span>끄면 문제마다 시간 제한 없이 풀어요</span></div><button type="button" class="sw on" id="sw-timer" role="switch" aria-checked="true" aria-label="제한시간"></button></div>
       <div class="row"><div class="rt"><b>결과 창 보기</b><span>끄면 바로 다음 판 (체력 0은 항상 표시)</span></div><button type="button" class="sw on" id="sw-result" role="switch" aria-checked="true" aria-label="결과 창 보기"></button></div>
       <div class="sty" id="next-box" role="radiogroup" aria-label="다음 판 방식">
         <div class="stl">다음 판 방식</div>
