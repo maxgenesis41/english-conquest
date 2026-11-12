@@ -448,3 +448,25 @@ button.sw { padding: 0; cursor: pointer; }
 .betatag { font-size: 11px; font-weight: 700; color: #fff; background: #E5484D; border-radius: 999px; padding: 1px 8px; vertical-align: 2px; margin-left: 4px; }
 #beta-band { width: 100%; margin-top: 8px; padding: 10px 12px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: #fff; border: 3px solid var(--ink); border-radius: 12px; }
 .betabadge { align-self: center; margin: 8px 0 0; padding: 3px 12px; border-radius: 999px; background: #FFF3C4; border: 2px solid #E0A100; color: #6B4E00; font-size: 12px; font-weight: 700; }
+
+/* v0.49 개인 기록 비교·PERFECT */
+.modal.res { position: relative; }
+.rec { margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; font-size: 14px; font-weight: 600; color: var(--sub); }
+.rec b { color: var(--ink); }
+.rec .chip { background: #EAF3FF; border: 3px solid var(--ink); border-radius: 999px; padding: 1px 12px; font-size: 13px; color: var(--ink); }
+.rec .chip.gold { background: var(--yellow); box-shadow: 0 3px 0 var(--ink); }
+.rec s { color: var(--sub); text-decoration-thickness: 2px; }
+.modal.res .stats div { position: relative; }
+.stats .nb { position: absolute; left: 50%; top: -17px; transform: translateX(-50%); white-space: nowrap; font-style: normal; font-size: 11px; font-weight: 700; background: var(--yellow); border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; }
+.perfect { margin: -6px auto 8px; display: inline-flex; align-items: center; gap: 8px; padding: 4px 18px; font-size: 26px; font-weight: 700; letter-spacing: 1px; color: #fff; text-shadow: 0 3px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink); background: linear-gradient(180deg, #FFD95A, #FF9F2E); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink); transform: rotate(-2deg); }
+.perfect i { font-style: normal; color: #fff; font-size: 20px; }
+.modal.res.pf { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,200,58,.55), 0 0 28px 8px rgba(255,200,58,.6); }
+.modal.res.pf .badge { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px #fff, 0 0 0 9px var(--yellow); }
+.pfx { position: absolute; font-size: 20px; color: var(--yellow); filter: drop-shadow(0 2px 0 var(--ink)); pointer-events: none; }
+@keyframes pfpulse { 0%, 100% { transform: rotate(-2deg) scale(1); } 50% { transform: rotate(-2deg) scale(1.06); } }
+@keyframes pfglow { 0% { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,200,58,.35), 0 0 16px 4px rgba(255,200,58,.4); } 100% { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,200,58,.7), 0 0 30px 10px rgba(255,200,58,.7); } }
+@media (prefers-reduced-motion: no-preference) {
+  .perfect { animation: pfpulse 1.1s ease-in-out infinite; }
+  .modal.res.pf { animation: pfglow 1.2s ease-in-out infinite alternate; }
+  .pfx { animation: fxtwinkle 1.2s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+}

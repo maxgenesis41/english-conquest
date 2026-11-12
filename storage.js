@@ -182,7 +182,13 @@ var EJ = (function () {
   }
 
   // 한 판 결과 기록: 레벨 최고 등급·모드별 최고 등급·모드 최고 점수를 갱신하고, 필수 모드 모두 A 이상이며 그 레벨 틀린 단어가 0개면 다음 레벨을 연다
-  function recordResult(lv, modeId, grade, score, required) {
+  // v0.49: 레벨·모드별 이전 최고 점수·최고 연속(읽기만). 없으면 undefined. 점수는 modes["레벨:모드"], 최고 연속은 modes["레벨:모드:c"]
+  function best(lv, modeId) {
+    var m = get("progress").modes, k = lv + ":" + modeId;
+    return { score: typeof m[k] === "number" ? m[k] : undefined, combo: typeof m[k + ":c"] === "number" ? m[k + ":c"] : undefined };
+  }
+
+  function recordResult(lv, modeId, grade, score, required, combo) {
     if (GRADES.indexOf(grade) < 0 || lv < 1 || lv > LV_COUNT || MODES.indexOf(modeId) < 0) return false;
     var p = get("progress");
     var st = p.lvs[String(lv)];
@@ -196,6 +202,7 @@ var EJ = (function () {
     }
     var key = lv + ":" + modeId;
     if (typeof score === "number" && (typeof p.modes[key] !== "number" || score > p.modes[key])) p.modes[key] = score;
+    if (typeof combo === "number" && combo >= 0 && combo % 1 === 0 && (typeof p.modes[key + ":c"] !== "number" || combo > p.modes[key + ":c"])) p.modes[key + ":c"] = combo;   // v0.49 최고 연속
     var next = p.lvs[String(lv + 1)];
     if (next && allCleared(st, required, lv) && reviewLeft(lv) === 0) next.unlocked = true;
     return set("progress", p);
@@ -290,7 +297,7 @@ var EJ = (function () {
 
   return {
     KEYS: KEYS, MODES: MODES, NEED: NEED, LV_COUNT: LV_COUNT, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, need: need, xp: xp, modeSlots: modeSlots, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
+    get: get, set: set, best: best, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, need: need, xp: xp, modeSlots: modeSlots, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

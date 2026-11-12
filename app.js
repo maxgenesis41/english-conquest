@@ -670,6 +670,7 @@
     var opened = EJ.tryUnlock(stage, requiredModes());   // 그 레벨 복습을 모두 마쳤고 모든 모드 A 이상이면 다음 레벨을 연다
     cur = null;
     bgmSync();
+    resetRecord();
     $("r-label").textContent = lvName(stage) + " · 틀린 단어 복습";
     var badge = $("r-badge"); badge.textContent = "✓"; badge.className = "badge pop";
     $("r-score").textContent = r.answered + "개 중 " + r.correct + "개 맞힘";
@@ -717,7 +718,8 @@
       for (i = 0; i < r.wrongIds.length; i++) { var ww = wordById(r.wrongIds[i]); if (ww) wl.push({ id: ww.id, lv: ww.lv }); }
       EJ.addWrongs(wl);
     }
-    EJ.recordResult(lastStage, lastMode, r.grade, r.score, requiredModes());   // 틀린 단어를 먼저 기록해야 레벨 열림 조건(복습 0개)이 맞다
+    var prevBest = EJ.best(lastStage, lastMode);   // v0.49: 저장하기 전에 이전 최고를 읽어 둔다
+    EJ.recordResult(lastStage, lastMode, r.grade, r.score, requiredModes(), r.bestCombo);   // 틀린 단어를 먼저 기록해야 레벨 열림 조건(복습 0개)이 맞다
     var after = EJ.get("progress").lvs[String(lastStage + 1)];
     var newlyUnlocked = !!(after && after.unlocked && !wasUnlocked);
     var lab = lvName(lastStage) + " · " + MODE_NAMES[lastMode];
@@ -727,6 +729,7 @@
     var pendLeft = EJ.reviewLeft(lastStage), pendNext = lastStage < LV_COUNT;
     var pending = !!(pendNext && after && !after.unlocked && xpNow.cur === xpNow.total && pendLeft > 0);
     var set = EJ.get("settings");
+    var perfect = r.score === 1350 && r.correct === 10 && r.answered === 10;   // v0.49: 10개 정답·힌트 없음(연속 보너스 포함 만점 1350점)
     cur = null;
     bgmSync();
     if (set.result || r.over) {
@@ -746,6 +749,7 @@
       $("r-combo").textContent = String(r.bestCombo);
       $("r-new-l").textContent = lastMode === "sentence" ? "힌트 사용" : "틀린 단어";
       $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : r.wrongIds.length);
+      showRecord(r, prevBest, perfect);
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
       if (unlockMsg) ban.appendChild(el("div", "banner up", unlockMsg));
@@ -765,13 +769,13 @@
         nb.querySelector(".t").textContent = "복습하기"; $("r-next-s").textContent = lvName(lastStage) + " " + pendLeft + "개";
         nb.dataset.act = "review";
       }
-      sfx(r.over ? "over" : "clear");
+      sfx(r.over ? "over" : perfect ? "perfect" : "clear");
       $("res-modal").style.display = "grid"; nb.focus();
     } else {
-      sfx("clear");
+      sfx(perfect ? "perfect" : "clear");
       var m2 = pickNext(set.next) || lastMode;
       if (!startGame(lastStage, m2)) startGame(lastStage, lastMode);
-      showToast(lab.split(" · ")[1] + " " + r.grade + " · " + r.score + "점 · " + r.correct + "/" + r.answered, unlockMsg);
+      showToast((perfect ? "🌟 PERFECT! " : "") + lab.split(" · ")[1] + " " + r.grade + " · " + r.score + "점 · " + r.correct + "/" + r.answered, unlockMsg);
     }
   }
 
@@ -789,6 +793,39 @@
       if (canPlay(m)) return m;
     }
     return lastMode;
+  }
+  // v0.49: 결과 팝업의 이전 기록 비교·PERFECT 표시(복습 판은 resetRecord로 모두 숨긴다)
+  function resetRecord() {
+    $("r-rec").style.display = "none"; $("r-rec").textContent = "";
+    $("r-perfect").style.display = "none"; $("r-combo-nb").style.display = "none";
+    var m = document.querySelector(".modal.res"); m.classList.remove("pf");
+    var x = m.querySelectorAll(".pfx"); for (var i = 0; i < x.length; i++) m.removeChild(x[i]);
+  }
+  function showRecord(r, prev, perfect) {
+    resetRecord();
+    var rec = $("r-rec"), c, b;
+    if (prev.score === undefined) {
+      rec.appendChild(el("b", "chip", "첫 도전")); rec.appendChild(el("span", "", "기록이 저장됐어요"));
+    } else if (r.score > prev.score) {
+      rec.appendChild(el("b", "chip gold", "🏆 신기록!"));
+      c = el("span", ""); c.appendChild(el("s", "", String(prev.score))); c.appendChild(document.createTextNode(" → "));
+      c.appendChild(el("b", "", r.score + "점")); rec.appendChild(c);
+    } else {
+      c = el("span", "", "이전 최고 "); c.appendChild(el("b", "", prev.score + "점")); rec.appendChild(c);
+      rec.appendChild(el("span", "", "· " + (prev.score > r.score ? (prev.score - r.score) + "점 차이" : "같은 점수")));
+    }
+    rec.style.display = "";
+    if (prev.score !== undefined && prev.combo !== undefined && r.bestCombo > prev.combo) $("r-combo-nb").style.display = "";
+    if (perfect) {
+      var m = document.querySelector(".modal.res");
+      $("r-perfect").style.display = ""; m.classList.add("pf");
+      var pos = [["8px", "10px"], ["6px", "calc(100% - 30px)"], ["40%", "-4px"], ["44%", "calc(100% - 22px)"], ["70%", "6px"]];
+      for (var i = 0; i < pos.length; i++) {
+        var e = el("span", "pfx", i % 2 ? "✦" : "★");
+        e.style.top = pos[i][0]; e.style.left = pos[i][1]; e.style.fontSize = (14 + i * 3) + "px"; e.style.setProperty("--d", (i * 180) + "ms");
+        m.appendChild(e);
+      }
+    }
   }
   var toastT = null;
   function showToast(text, sub) {

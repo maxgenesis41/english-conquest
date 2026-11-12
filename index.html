@@ -32,7 +32,7 @@
     <div id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
     <p class="betabadge" id="beta-badge" style="display:none"></p><!-- BETA-TEST -->
-    <p class="ver">v0.48</p>
+    <p class="ver">v0.50</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -79,14 +79,16 @@
   <!-- 4. 결과 (작은 팝업. 설정에서 끄면 바로 다음 판으로 이동) -->
   <div class="shade" id="res-modal" style="display:none">
     <div class="chunk modal res" role="dialog" aria-modal="true" aria-labelledby="r-label">
+      <div class="perfect" id="r-perfect" style="display:none"><i>★</i>PERFECT!<i>★</i></div>
       <span class="label" id="r-label"></span>
       <div class="rline">
         <div class="badge pop" id="r-badge"></div>
         <div class="rtx"><div class="score2" id="r-score"></div></div>
       </div>
+      <div class="rec" id="r-rec" style="display:none"></div>
       <div class="stats">
         <div><small id="r-l1">정답</small><b id="r-correct2"></b></div>
-        <div><small id="r-l2">최고 연속</small><b id="r-combo"></b></div>
+        <div><small id="r-l2">최고 연속</small><b id="r-combo"></b><em class="nb" id="r-combo-nb" style="display:none">🏆 신기록</em></div>
         <div><small id="r-new-l">틀린 단어</small><b id="r-new"></b></div>
       </div>
       <div id="r-banner"></div>
