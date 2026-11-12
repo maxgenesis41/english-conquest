@@ -324,13 +324,9 @@ button.sw { padding: 0; cursor: pointer; }
 /* 틀린 단어 복습 (v0.30) */
 .rtag { display: none; flex: 1; text-align: center; background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: 16px; box-shadow: 0 3px 0 var(--ink); }
 #game.review .rtag { display: block; }
-#game.review .hp, #game.review .score, #game.review #g-foot { display: none; }
-.rgrp { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 12px; }
-.rgrp b { font-size: 20px; color: var(--ink); }
-.rgrp .btn { width: auto; height: 44px; font-size: 16px; padding: 0 18px; margin: 0; border-radius: 14px; box-shadow: 0 4px 0 var(--ink), inset 0 -4px 0 rgba(0,0,0,.16), inset 0 3px 0 rgba(255,255,255,.4); }
-.rgrp .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), inset 0 -4px 0 rgba(0,0,0,.16); }
+#game.review .hp, #game.review .score { display: none; }
+#game.review #g-foot .hint, #game.review #g-foot .erase, #game.review #g-foot .combo { display: none; }
 .rnote { margin: 0 0 14px; background: #FFF4CC; border: 3px solid var(--ink); border-radius: 16px; padding: 9px 12px; font-weight: 700; font-size: 14px; line-height: 1.35; color: var(--ink); }
-.rgrp.hs { margin-bottom: 4px; }
 .rsub { font-size: 13px; font-weight: 700; color: #E0542B; margin: 0 0 12px; }
 .meta .pend { color: #E0542B; }
 .banner.note { background: #FFF4CC; flex-direction: column; gap: 2px; text-align: center; font-size: 14px; }
@@ -507,3 +503,86 @@ button.sw { padding: 0; cursor: pointer; }
 #home .rv-guide { margin: 4px 4px 0; font-size: 12px; }
 #home .ver { margin-top: 6px; }
 #home .betabadge { position: absolute; top: 12px; left: 14px; margin: 0; padding: 2px 8px; font-size: 10px; line-height: 1.3; text-align: center; z-index: 2; }
+
+/* v0.54 모드 선택·틀린 단어 복습: 고정 크기(스크롤 없음) (P-7) */
+#modes.screen.on { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding: 12px 14px 10px; overflow: hidden; }
+#modes .top { flex: none; margin-bottom: 0; height: 48px; }
+#modes .sec { flex: none; font-size: 17px; margin: 4px 2px 2px; }
+#modes .mprog { flex: none; margin: 0 2px 8px; font-size: 12px; line-height: 1.35; word-break: keep-all; }
+#modes-note { flex: none; }
+#modes-note .say { margin: 0 0 8px; padding: 6px 10px; font-size: 13px; }
+#modes .mode { flex: 1 1 0; min-height: 52px; max-height: 76px; height: auto; margin: 0 0 9px; box-shadow: 0 4px 0 var(--ink); }
+#modes .mode.soon { box-shadow: 0 4px 0 #8C9AB8; }
+#modes .mode:last-child { margin-bottom: 5px; }
+#modes .mode .no { width: 38px; height: 38px; font-size: 17px; }
+#modes .mode .name { font-size: 16px; }
+#modes .mode .desc { font-size: 12px; }
+#review.screen.on { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding: 12px 14px 10px; overflow: hidden; }
+#review .top { flex: none; margin-bottom: 0; height: 48px; }
+#rv-full { flex: 1; min-height: 0; flex-direction: column; }
+#review .wsum { align-self: center; margin: 2px 0 8px; font-size: 13px; padding: 2px 14px; flex: none; }
+.lvnav { flex: none; display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.lvnav .arr { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; flex: none; font-size: 18px; }
+.lvnav .arr:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.lvnav .arr:disabled { opacity: .35; box-shadow: none; cursor: default; }
+.lvnav .arr:focus-visible, .pager button:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.lvnav .arr.nx .ic { transform: rotate(180deg); }
+.lvnav .cur { flex: 1; min-width: 0; height: 52px; border: 3px solid var(--ink); border-radius: 16px; background: #fff; box-shadow: inset 10px 0 0 var(--c), 0 3px 0 var(--ink); padding: 0 10px 0 20px; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+.lvnav .l1 { display: flex; align-items: baseline; gap: 6px; }
+.lvnav .bn { font-size: 16px; font-weight: 700; }
+.lvnav .pg { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--sub); }
+.lvnav .l2 { font-size: 11px; color: var(--sub); }
+.wgrid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 6px 8px; max-height: 290px; }
+.wgrid .word { height: auto; margin: 0; padding: 0 10px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; box-shadow: 0 3px 0 var(--ink); min-width: 0; }
+.wgrid .word .e { font-size: 15px; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wgrid .word .k { font-size: 12px; font-weight: 600; color: var(--sub); background: none; border: 0; padding: 0; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wgrid .word.fill { visibility: hidden; }
+.pager { flex: none; display: flex; justify-content: center; align-items: center; gap: 10px; margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--sub); height: 26px; }
+.pager:empty { display: none; }
+.pager button { width: 30px; height: 26px; border-radius: 999px; border: 2px solid var(--ink); background: #fff; display: grid; place-items: center; font-size: 12px; }
+.pager button:disabled { opacity: .35; cursor: default; }
+.pager .nx .ic { transform: rotate(180deg); }
+#review .btns { flex: none; margin-top: 8px; margin-bottom: 0; }
+#review .btn { height: 48px; font-size: 17px; margin-bottom: 0; }
+#review #rv-empty { margin-top: 12px; }
+
+/* v0.55 게임 화면: 고정 크기(스크롤 없음) (P-7) — 정답 안내는 카드 안내 줄, 다음 버튼은 하단 줄(힌트·지우기 자리) */
+#game.screen.on { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding: 12px 16px 12px; overflow: hidden; }
+#game .status, #game .prog, #game .tmr, #game #g-card, #game #g-opts { flex: none; }
+#game .foot { flex: none; margin-top: auto; padding-top: 10px; }
+#game #g-foot .btn.next { flex: 1; min-width: 0; height: 48px; margin: 0; font-size: 17px; }
+#game #g-foot.fb .hint, #game #g-foot.fb .erase { display: none; }
+.q .sub.fbmsg { font-size: 14px; font-weight: 700; color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; padding: 3px 10px; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
+.q .sub.fbmsg.good { background: #E4F6E4; }
+.q .sub.fbmsg.bad { background: #FFE6E8; }
+@media (max-height: 720px) {
+  #game.screen.on { padding: 10px 14px 10px; }
+  #game .status { margin-bottom: 6px; }
+  #game .status .round { width: 40px; height: 40px; }
+  #game .hp, #game .score { height: 34px; }
+  #game .prog { margin-bottom: 6px; }
+  #game .prog .bar { height: 14px; }
+  #game .tmr { margin: -2px 0 6px; }
+  #game .tmr .ck { width: 20px; height: 20px; }
+  #game .tmr .bar { height: 12px; }
+  #game .q { padding: 10px 10px 12px; margin-bottom: 10px; }
+  #game .q .ko { margin: 4px 0 8px !important; }
+  #game .q .en { font-size: 34px; margin: 8px 0 2px; }
+  #game .tiles span, #game .slots span { height: 46px; font-size: 24px; }
+  #game .tiles.sm span, #game .slots.sm span { height: 42px; font-size: 21px; }
+  #game .tiles.xs span, #game .slots.xs span { height: 38px; font-size: 17px; }
+  #game .opts { gap: 10px; }
+  #game .opt { height: 58px; font-size: 28px; }
+  #game .opt.txt { font-size: 19px; }
+  #game .opt.en { font-size: 22px; }
+  #game .opts.pool, #game .pool { gap: 8px; }
+  #game .pool .opt { width: 44px; height: 50px; font-size: 24px; border-radius: 13px; }
+  #game .pool.sm { gap: 6px; }
+  #game .pool.sm .opt { width: 40px; height: 46px; font-size: 22px; }
+  #game .sent { min-height: 84px; padding: 8px 6px; gap: 5px; }
+  #game .wd { height: 34px; padding: 0 8px; font-size: 16px; }
+  #game .wpool { gap: 7px; }
+  #game .wpool .opt { height: 42px; padding: 0 10px; font-size: 17px; }
+  #game .spk { width: 76px; height: 76px; margin: 4px auto 4px; }
+  #game .foot { padding-top: 8px; }
+}

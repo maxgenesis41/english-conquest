@@ -99,33 +99,41 @@
   }
 
   // 틀린 단어 복습: 틀린 단어를 레벨별로 묶어(오래된 순) 보여 준다. 없으면 빈 상태 화면
+  // 틀린 단어 복습(v0.54, 고정 크기): 틀린 단어가 있는 레벨을 ◀▶로 넘기고, 단어는 2열×5행(10개)씩 쪽으로 보여 준다. 1쪽 10개가 곧 "복습 시작"으로 풀 단어(오래된 순)다. 선택한 레벨·쪽은 저장하지 않는다
+  var rvLv = 0, rvPage = 1;   // rvLv: 보고 있는 레벨(0이면 첫 레벨)
   function renderReview() {
-    var items = EJ.get("review").items;
-    var list = document.getElementById("rv-list");
-    list.textContent = "";
-    document.getElementById("rv-full").style.display = items.length ? "block" : "none";
+    var items = EJ.get("review").items, i, by = {}, lvs = [];
+    document.getElementById("rv-full").style.display = items.length ? "flex" : "none";
     document.getElementById("rv-empty").style.display = items.length ? "none" : "block";
     document.getElementById("rv-sum").textContent = "틀린 단어 " + items.length + "개";
-    var by = {}, i;
+    if (!items.length) return;
     for (i = 0; i < items.length; i++) (by[items[i].lv] = by[items[i].lv] || []).push(items[i]);
-    for (var n = 1; n <= LV_COUNT; n++) {
-      var its = by[n];
-      if (!its) continue;
-      var head = document.createElement("div"); head.className = "rgrp";
-      var tt = document.createElement("b"); tt.textContent = lvName(n) + " · " + its.length + "개";
-      var bt = document.createElement("button"); bt.className = "btn"; bt.textContent = "복습 시작"; bt.dataset.review = String(n);
-      head.appendChild(tt); head.appendChild(bt);
-      list.appendChild(head);
-      for (i = 0; i < its.length; i++) {
+    for (var n = 1; n <= LV_COUNT; n++) if (by[n]) lvs.push(n);
+    if (!by[rvLv]) { rvLv = lvs[0]; rvPage = 1; }
+    var li = lvs.indexOf(rvLv), its = by[rvLv], pages = Math.max(1, Math.ceil(its.length / 10));
+    if (rvPage < 1) rvPage = 1; if (rvPage > pages) rvPage = pages;
+    document.getElementById("rv-nav").innerHTML =
+      '<button class="arr pv" data-lvmove="-1" aria-label="이전 레벨"' + (li <= 0 ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button>' +
+      '<div class="cur" style="--c:' + lvColor(rvLv) + '"><div class="l1"><span class="bn">' + lvName(rvLv) + '</span><span class="pg">' + (li + 1) + "/" + lvs.length + '</span></div><div class="l2">틀린 단어 ' + its.length + '개</div></div>' +
+      '<button class="arr nx" data-lvmove="1" aria-label="다음 레벨"' + (li >= lvs.length - 1 ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button>';
+    var list = document.getElementById("rv-list");
+    list.textContent = "";
+    var from = (rvPage - 1) * 10, k2;
+    for (i = from; i < from + 10; i++) {
+      var row = document.createElement("div");
+      if (i < its.length) {
         var w = wordById(its[i].id);
-        var row = document.createElement("div");
         row.className = "chunk word";
         var e = document.createElement("span"); e.className = "e"; e.textContent = w ? w.en : its[i].id;
         var k = document.createElement("span"); k.className = "k"; k.textContent = w ? w.ko : "?";
         row.appendChild(e); row.appendChild(k);
-        list.appendChild(row);
-      }
+      } else row.className = "chunk word fill";
+      list.appendChild(row);
     }
+    document.getElementById("rv-pager").innerHTML = pages > 1 ?
+      '<button class="pv" data-pgmove="-1" aria-label="이전 쪽"' + (rvPage <= 1 ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button><span>' + rvPage + "/" + pages + '쪽</span>' +
+      '<button class="nx" data-pgmove="1" aria-label="다음 쪽"' + (rvPage >= pages ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button>' : "";
+    var go = document.getElementById("rv-go"); go.dataset.review = String(rvLv); go.textContent = lvName(rvLv) + " 복습 시작";
   }
 
   // ===== 게임 흐름 (3단계) =====
@@ -398,7 +406,7 @@
     var hb = $("g-hint");
     renderHint();
     hb.disabled = cur.hintsLeft <= 0;
-    $("g-say").textContent = "";
+    $("g-foot").classList.remove("fb");
     $("g-next").style.display = "none";
     setupLimit();
     bgmSync();   // 판 시작·다음 문제: 연속 정답 단계와 듣기 보호를 반영
@@ -575,21 +583,23 @@
     fxChip();
     bgmSync();   // 연속이 늘면 빨라지고, 오답·시간 초과로 끊기면 평상으로
     renderHp();
-    var say = el("div", "say " + (r.correct ? "good" : "bad"));
+    var msg;   // v0.55: 정답·오답 안내는 문제 카드 맨 위 안내 줄을 바꿔 보여 준다(고정 크기 화면에서 높이를 더하지 않으려고)
     if (r.correct) {
-      say.textContent = "정답이에요!" + (r.healed ? " 체력 +1" : "");
+      msg = "정답이에요!" + (r.healed ? " 체력 +1" : "");
       if (!cur.review) { $("g-card").appendChild(el("span", "gain", "+" + r.gain)); fxShow(true); fxPulse(true); }
     } else {
-      say.textContent = wrongText;
+      msg = wrongText;
       fxClear();   // 오답·시간 초과로 연속이 끊기면 연출도 사라진다
     }
-    var sayBox = $("g-say"); sayBox.textContent = ""; sayBox.appendChild(say);
+    var sub = $("g-card").querySelector(".sub");
+    if (sub) { sub.className = "sub fbmsg " + (r.correct ? "good" : "bad"); sub.textContent = msg; }
     if (r.correct && !r.over && !r.last) {
       timer = setTimeout(next, 800);
     } else {
       var nb = $("g-next");
       nb.textContent = (r.over || r.last) ? "결과 보기" : "다음 문제";
       nb.style.display = "block";
+      $("g-foot").classList.add("fb");   // 힌트·지우기 자리를 다음 버튼이 쓴다
       nb.focus();
     }
   }
@@ -844,7 +854,7 @@
       screens[i].classList.toggle("on", screens[i].id === name);
     }
     if (name === "home") { viewBand = -1; renderHome(); }
-    if (name === "review") renderReview();
+    if (name === "review") { rvLv = 0; rvPage = 1; renderReview(); }
     if (name === "modes") renderModes();
     if (name === "settings") { setTab("game"); renderSettings(); }
     bgmSync();   // 게임 화면에서만 재생, 다른 화면으로 가면 정지
@@ -951,6 +961,22 @@
         lastStage = +go.dataset.n || 1;
       }
       show(go.dataset.go);
+      return;
+    }
+    var lm = t.closest("[data-lvmove]");
+    if (lm) {   // 복습 목록: 레벨 넘기기(저장하지 않음)
+      if (!lm.disabled) {
+        var ks = {}, ls = [], it2 = EJ.get("review").items, q;
+        for (q = 0; q < it2.length; q++) ks[it2[q].lv] = 1;
+        for (q = 1; q <= LV_COUNT; q++) if (ks[q]) ls.push(q);
+        var ni = ls.indexOf(rvLv) + (+lm.dataset.lvmove);
+        if (ni >= 0 && ni < ls.length) { rvLv = ls[ni]; rvPage = 1; renderReview(); var nb = document.querySelector('[data-lvmove="' + lm.dataset.lvmove + '"]'); if (nb && !nb.disabled) nb.focus(); }
+      }
+      return;
+    }
+    var pm = t.closest("[data-pgmove]");
+    if (pm) {   // 복습 목록: 쪽 넘기기(저장하지 않음)
+      if (!pm.disabled) { rvPage += +pm.dataset.pgmove; renderReview(); var np = document.querySelector('[data-pgmove="' + pm.dataset.pgmove + '"]'); if (np && !np.disabled) np.focus(); }
       return;
     }
     var rb = t.closest("[data-review]");

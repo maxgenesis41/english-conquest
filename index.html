@@ -33,7 +33,7 @@
     <div class="lvgrid" id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
     <p class="betabadge" id="beta-badge" style="display:none"></p><!-- BETA-TEST -->
-    <p class="ver">v0.53</p>
+    <p class="ver">v0.55</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -61,13 +61,12 @@
     <div class="tmr" id="g-tmr" role="timer" aria-label="제한시간" style="display:none"><svg class="ck" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="11" fill="#fff" stroke="#24336B" stroke-width="2.6"/><path d="M16 10v7l4.5 3" fill="none" stroke="#24336B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3.5h8" stroke="#24336B" stroke-width="2.6" stroke-linecap="round"/></svg><div class="bar"><div id="g-tbar" style="width:100%"></div></div><b id="g-tsec">20초</b></div>
     <div class="chunk q" id="g-card"></div>
     <div class="opts" id="g-opts"></div>
-    <div id="g-say"></div>
     <div class="foot" id="g-foot">
       <button class="hint keys" id="g-hint" aria-label="힌트"></button>
       <button class="erase" id="g-erase" style="display:none" disabled>지우기</button>
+      <button class="btn next" id="g-next" style="display:none">다음 문제</button>
       <span class="combo"><svg class="ic"><use href="#i-fire"/></svg>연속 <span id="g-combo">0</span></span>
     </div>
-    <button class="btn next" id="g-next" style="display:none">다음 문제</button>
     <div class="shade" id="exit-modal" style="display:none">
       <div class="chunk modal" role="dialog" aria-modal="true" aria-labelledby="exit-title">
         <h3 id="exit-title">그만둘까요?</h3>
@@ -107,7 +106,10 @@
     <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">틀린 단어 복습</h1></div>
     <div id="rv-full">
       <span class="wsum" id="rv-sum"></span>
-      <div id="rv-list"></div>
+      <div class="lvnav" id="rv-nav"></div>
+      <div class="wgrid" id="rv-list"></div>
+      <div class="pager" id="rv-pager"></div>
+      <div class="btns"><button class="btn yellow" id="rv-go" data-review="1">복습 시작</button></div>
     </div>
     <div id="rv-empty" class="chunk empty" style="display:none">
       <div class="q2">?</div>
