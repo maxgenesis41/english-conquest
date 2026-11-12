@@ -131,6 +131,46 @@
   function $(id) { return document.getElementById(id); }
   function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
 
+  // ===== 정답 연출 (v0.45) =====
+  // 연속 정답 단계(3·5·10)에 따라 리본·카드 빛·별·연속 칩을 바꾼다. 점수·저장 규칙은 건드리지 않고, 복습 판에는 쓰지 않는다
+  var FX_STARS = {
+    3: [["left:2%;top:-16px", 20], ["right:30%;top:-20px", 16], ["left:6%;bottom:-16px", 16]],
+    5: [["left:2%;top:-18px", 22], ["right:30%;top:-24px", 18], ["left:24%;top:-14px", 14], ["left:8%;bottom:-18px", 18], ["right:4%;bottom:-16px", 20]],
+    10: [["left:1%;top:-20px", 24], ["right:29%;top:-26px", 20], ["left:22%;top:-16px", 16], ["left:8%;bottom:-20px", 20], ["right:5%;bottom:-18px", 22], ["left:46%;bottom:-20px", 16], ["right:-1%;top:44%", 18]]
+  };
+  function comboTier(c) { return c >= 10 ? 10 : c >= 5 ? 5 : c >= 3 ? 3 : 0; }
+  function fxClear() {   // 연속이 끊기거나 판이 끝나거나 나갈 때: 카드 빛·리본·별·가장자리 빛·점수 칩 효과를 모두 걷는다
+    var card = $("g-card"), old = card.querySelectorAll(".fx-banner, .fx-star"), i;
+    for (i = old.length - 1; i >= 0; i--) card.removeChild(old[i]);
+    card.classList.remove("glow3", "glow5", "glow10");
+    $("game").classList.remove("edge10");
+    fxPulse(false);
+  }
+  function fxPulse(on) { document.querySelector("#game .score").classList.toggle("pulse", on); }
+  function fxChip() {   // 연속 칩 크기·색: 지금 연속 횟수 기준(오답으로 0이 되면 원래대로)
+    var cb = document.querySelector("#game .combo"), t = cur ? comboTier(cur.combo) : 0;
+    cb.classList.remove("c3", "c5", "c10");
+    if (t) cb.classList.add("c" + t);
+  }
+  // 지금 연속 단계의 연출을 카드에 그린다. 연속이 이어지는 동안 새 문제에서도 유지되고(반짝임은 CSS 반복), 정답 순간(enter)에만 튀어 나온다
+  function fxShow(enter) {
+    var t = cur && !cur.review ? comboTier(cur.combo) : 0, card = $("g-card"), s, e, i;
+    fxClear();
+    if (!t) return;
+    card.classList.add("glow" + t);
+    e = el("span", "fx-banner t" + t + (enter ? " in" : ""), cur.combo + " 콤보!" + (t === 10 ? "!" : ""));
+    e.setAttribute("aria-hidden", "true");
+    card.appendChild(e);
+    s = FX_STARS[t];
+    for (i = 0; i < s.length; i++) {
+      e = el("span", "fx-star" + (enter ? " in" : ""), "\u2605");
+      e.setAttribute("aria-hidden", "true");
+      e.style.cssText = s[i][0] + ";font-size:" + s[i][1] + "px;--d:" + (i * 210) + "ms";
+      card.appendChild(e);
+    }
+    if (t === 10) $("game").classList.add("edge10");
+  }
+
   function wordsOfStage(n, mode) {
     var src = mode === "sentence" ? SENTENCES : ALLW, out = [];
     for (var i = 0; i < src.length; i++) if (src[i].lv === n) out.push(src[i]);
@@ -308,11 +348,13 @@
 
   function renderQuestion() {
     var q = Game.current(cur);
+    fxPulse(false);
     renderHp();
     $("g-score").textContent = String(cur.score);
     $("g-count").textContent = (cur.index + 1) + " / " + cur.total;
     $("g-bar").style.width = (cur.index * 100 / cur.total) + "%";
     $("g-combo").textContent = String(cur.combo);
+    fxChip();
     var hb = $("g-hint");
     renderHint();
     hb.disabled = cur.hintsLeft <= 0;
@@ -323,6 +365,7 @@
     $("g-erase").style.display = isOrder ? "" : "none";
     spell = isOrder ? { seq: [] } : null;
     var card = $("g-card"); card.textContent = "";
+    fxShow(false);   // 연속이 이어지는 동안 새 문제에서도 연출 유지
     var box = $("g-opts"); box.textContent = "";
     box.className = "opts";
     if (cur.mode === "letter") {
@@ -488,13 +531,15 @@
     $("g-hint").disabled = true;
     $("g-score").textContent = String(cur.score);
     $("g-combo").textContent = String(cur.combo);
+    fxChip();
     renderHp();
     var say = el("div", "say " + (r.correct ? "good" : "bad"));
     if (r.correct) {
       say.textContent = "정답이에요!" + (r.healed ? " 체력 +1" : "");
-      if (!cur.review) $("g-card").appendChild(el("span", "gain", "+" + r.gain));
+      if (!cur.review) { $("g-card").appendChild(el("span", "gain", "+" + r.gain)); fxShow(true); fxPulse(true); }
     } else {
       say.textContent = wrongText;
+      fxClear();   // 오답·시간 초과로 연속이 끊기면 연출도 사라진다
     }
     var sayBox = $("g-say"); sayBox.textContent = ""; sayBox.appendChild(say);
     if (r.correct && !r.over && !r.last) {
@@ -606,6 +651,7 @@
 
   // 한 판이 끝날 때 한 번만 저장
   function finish() {
+    fxClear();
     if (cur && cur.review) { finishReview(); return; }
     clearTimer();
     Sound.stop();
@@ -829,7 +875,7 @@
     if (t.closest("#g-next")) { next(); return; }
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
-    if (t.closest("#exit-yes")) { freezeLimit(); tm = null; closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; show("home"); return; }
+    if (t.closest("#exit-yes")) { freezeLimit(); tm = null; closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; fxClear(); show("home"); return; }
     if (t.closest("#r-next")) { closeRes(); if (lastReview || $("r-next").dataset.act === "review") { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
     if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
     if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = lvName(lastStage); show("modes"); return; }

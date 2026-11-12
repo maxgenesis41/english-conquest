@@ -373,3 +373,58 @@ button.sw { padding: 0; cursor: pointer; }
 .band.locked .bn { color: #7C8AA8; }
 .band.locked .be, .band.locked .bl2 { color: #8C9AB8; }
 .band .lock { margin-left: auto; font-size: 22px; color: #8C9AB8; flex: none; }
+
+/* ===== 정답 연출 (v0.45) =====  연속 3·5·10회 단계. 움직임은 모션 줄이기 설정이 아닐 때만 */
+.score { transition: transform .2s, background-color .2s; }
+.score.pulse { transform: scale(1.1); background: #FFE08A; }
+.combo { transform-origin: right center; transition: transform .2s, background-color .2s; }
+.combo.c3 { transform: scale(1.08); }
+.combo.c5 { transform: scale(1.16); background: var(--pink); }
+.combo.c10 { transform: scale(1.26); background: var(--red); }
+.gain { transform-origin: right center; }
+.fx-banner { position: absolute; left: 50%; top: -18px; transform: translateX(-50%); z-index: 3; white-space: nowrap; height: 30px; line-height: 24px; padding: 0 14px; border: 3px solid var(--ink); border-radius: 999px; font-weight: 700; font-size: 16px; color: #fff; text-shadow: -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink), 1px 1px 0 var(--ink); box-shadow: 0 3px 0 var(--ink); pointer-events: none; }
+.fx-banner.t3 { background: var(--orange); }
+.fx-banner.t5 { background: var(--pink); font-size: 18px; height: 32px; line-height: 26px; }
+.fx-banner.t10 { background: var(--red); font-size: 20px; height: 34px; line-height: 28px; padding: 0 18px; }
+.fx-star { position: absolute; z-index: 4; color: var(--yellow); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; line-height: 1; pointer-events: none; }
+#g-card.glow3 { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,200,58,.55), 0 0 22px 8px rgba(255,200,58,.75); }
+#g-card.glow5 { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,111,174,.5), 0 0 24px 10px rgba(255,111,174,.7); }
+#g-card.glow10 { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,87,103,.5), 0 0 28px 12px rgba(255,87,103,.75); }
+#game.edge10::after { content: ""; position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; box-shadow: inset 0 0 70px 6px rgba(255,111,174,.55); }
+@keyframes fxpop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes fxdrop { 0% { transform: translate(-50%, -12px) scale(.6); opacity: 0; } 65% { transform: translate(-50%, 2px) scale(1.12); opacity: 1; } 100% { transform: translate(-50%, 0) scale(1); opacity: 1; } }
+@keyframes fxfade { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes fxstar { 0% { transform: scale(.1) rotate(-40deg); opacity: 0; } 55% { transform: scale(1.35) rotate(10deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .gain { animation: fxpop .38s ease-out both; }
+  .fx-banner { animation: fxdrop .42s ease-out both; }
+  .fx-star { animation: fxstar .55s ease-out both; animation-delay: var(--d, 0ms); }
+  #g-card { transition: box-shadow .3s; }
+  #game.edge10::after { animation: fxfade .3s ease-out both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .score, .combo { transition: none; }
+}
+
+/* 정답 연출 유지·반짝임(v0.45 수정): 연속이 이어지는 동안 반짝반짝. 움직임은 모션 줄이기가 아닐 때만 */
+@keyframes fxtwinkle { 0%, 100% { transform: scale(1) rotate(0); opacity: 1; } 50% { transform: scale(1.4) rotate(18deg); opacity: .5; } }
+@keyframes fxribbon { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.07); } }
+@keyframes fxchip { 0%, 100% { transform: scale(var(--s)); } 50% { transform: scale(calc(var(--s) + .07)); } }
+@keyframes fxglow3 { 0% { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,200,58,.35), 0 0 12px 3px rgba(255,200,58,.45); } 100% { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,200,58,.7), 0 0 26px 10px rgba(255,200,58,.9); } }
+@keyframes fxglow5 { 0% { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,111,174,.3), 0 0 12px 3px rgba(255,111,174,.4); } 100% { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,111,174,.65), 0 0 28px 12px rgba(255,111,174,.85); } }
+@keyframes fxglow10 { 0% { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,87,103,.3), 0 0 14px 4px rgba(255,87,103,.45); } 100% { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,87,103,.7), 0 0 32px 14px rgba(255,87,103,.9); } }
+@keyframes fxedge { 0% { opacity: .55; } 100% { opacity: 1; } }
+.combo.c3 { --s: 1.08; } .combo.c5 { --s: 1.16; } .combo.c10 { --s: 1.26; }
+@media (prefers-reduced-motion: no-preference) {
+  .fx-star { animation: fxtwinkle 1.3s ease-in-out var(--d, 0ms) infinite; }
+  .fx-star.in { animation: fxstar .55s ease-out var(--d, 0ms) both, fxtwinkle 1.3s ease-in-out calc(var(--d, 0ms) + .55s) infinite; }
+  .fx-banner { animation: fxribbon 1.2s ease-in-out infinite; }
+  .fx-banner.t10 { animation-duration: .9s; }
+  .fx-banner.in { animation: fxdrop .42s ease-out both, fxribbon 1.2s ease-in-out .42s infinite; }
+  .fx-banner.t10.in { animation: fxdrop .42s ease-out both, fxribbon .9s ease-in-out .42s infinite; }
+  #g-card.glow3 { animation: fxglow3 1.1s ease-in-out infinite alternate; }
+  #g-card.glow5 { animation: fxglow5 1s ease-in-out infinite alternate; }
+  #g-card.glow10 { animation: fxglow10 .8s ease-in-out infinite alternate; }
+  #game.edge10::after { animation: fxedge .8s ease-in-out infinite alternate; }
+  .combo.c3, .combo.c5, .combo.c10 { animation: fxchip 1.2s ease-in-out infinite; transition: background-color .2s; }
+}
