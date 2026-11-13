@@ -145,15 +145,10 @@
   function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
 
   // ===== 정답 연출 (v0.45) =====
-  // 연속 정답 단계(3·5·10)에 따라 리본·카드 빛·별·연속 칩을 바꾼다. 점수·저장 규칙은 건드리지 않고, 복습 판에는 쓰지 않는다
-  var FX_STARS = {
-    3: [["left:2%;top:-16px", 20], ["right:30%;top:-20px", 16], ["left:6%;bottom:-16px", 16]],
-    5: [["left:2%;top:-18px", 22], ["right:30%;top:-24px", 18], ["left:24%;top:-14px", 14], ["left:8%;bottom:-18px", 18], ["right:4%;bottom:-16px", 20]],
-    10: [["left:1%;top:-20px", 24], ["right:29%;top:-26px", 20], ["left:22%;top:-16px", 16], ["left:8%;bottom:-20px", 20], ["right:5%;bottom:-18px", 22], ["left:46%;bottom:-20px", 16], ["right:-1%;top:44%", 18]]
-  };
+  // 연속 정답 단계(3·5·10)에 따라 리본·카드 빛·연속 칩의 색을 바꾼다(v0.67부터 별 없음). 점수·저장 규칙은 건드리지 않고, 복습 판에는 쓰지 않는다
   function comboTier(c) { return c >= 10 ? 10 : c >= 5 ? 5 : c >= 3 ? 3 : 0; }
-  function fxClear() {   // 연속이 끊기거나 판이 끝나거나 나갈 때: 카드 빛·리본·별·가장자리 빛·점수 칩 효과를 모두 걷는다
-    var card = $("g-card"), old = card.querySelectorAll(".fx-banner, .fx-star"), i;
+  function fxClear() {   // 연속이 끊기거나 판이 끝나거나 나갈 때: 카드 빛·리본·가장자리 빛·점수 칩 효과를 모두 걷는다
+    var card = $("g-card"), old = card.querySelectorAll(".fx-banner"), i;
     for (i = old.length - 1; i >= 0; i--) card.removeChild(old[i]);
     card.classList.remove("glow3", "glow5", "glow10");
     $("game").classList.remove("edge10");
@@ -167,20 +162,13 @@
   }
   // 지금 연속 단계의 연출을 카드에 그린다. 연속이 이어지는 동안 새 문제에서도 유지되고(반짝임은 CSS 반복), 정답 순간(enter)에만 튀어 나온다
   function fxShow(enter) {
-    var t = cur && !cur.review ? comboTier(cur.combo) : 0, card = $("g-card"), s, e, i;
+    var t = cur && !cur.review ? comboTier(cur.combo) : 0, card = $("g-card"), e;
     fxClear();
     if (!t) return;
     card.classList.add("glow" + t);
     e = el("span", "fx-banner t" + t + (enter ? " in" : ""), cur.combo + " 콤보!" + (t === 10 ? "!" : ""));
     e.setAttribute("aria-hidden", "true");
     card.appendChild(e);
-    s = FX_STARS[t];
-    for (i = 0; i < s.length; i++) {
-      e = el("span", "fx-star" + (enter ? " in" : ""), "\u2605");
-      e.setAttribute("aria-hidden", "true");
-      e.style.cssText = s[i][0] + ";font-size:" + s[i][1] + "px;--d:" + (i * 210) + "ms";
-      card.appendChild(e);
-    }
     if (t === 10) $("game").classList.add("edge10");
   }
 

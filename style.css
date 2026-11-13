@@ -364,7 +364,6 @@ button.sw { padding: 0; cursor: pointer; }
 .fx-banner.t3 { background: var(--orange); }
 .fx-banner.t5 { background: var(--pink); font-size: 18px; height: 32px; line-height: 26px; }
 .fx-banner.t10 { background: var(--red); font-size: 20px; height: 34px; line-height: 28px; padding: 0 18px; }
-.fx-star { position: absolute; z-index: 4; color: var(--yellow); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; line-height: 1; pointer-events: none; }
 #g-card.glow3 { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,200,58,.55), 0 0 22px 8px rgba(255,200,58,.75); }
 #g-card.glow5 { box-shadow: 0 5px 0 var(--ink), 0 0 0 5px rgba(255,111,174,.5), 0 0 24px 10px rgba(255,111,174,.7); }
 #g-card.glow10 { box-shadow: 0 5px 0 var(--ink), 0 0 0 6px rgba(255,87,103,.5), 0 0 28px 12px rgba(255,87,103,.75); }
@@ -372,11 +371,9 @@ button.sw { padding: 0; cursor: pointer; }
 @keyframes fxpop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fxdrop { 0% { transform: translate(-50%, -12px) scale(.6); opacity: 0; } 65% { transform: translate(-50%, 2px) scale(1.12); opacity: 1; } 100% { transform: translate(-50%, 0) scale(1); opacity: 1; } }
 @keyframes fxfade { 0% { opacity: 0; } 100% { opacity: 1; } }
-@keyframes fxstar { 0% { transform: scale(.1) rotate(-40deg); opacity: 0; } 55% { transform: scale(1.35) rotate(10deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
 @media (prefers-reduced-motion: no-preference) {
   .gain { animation: fxpop .38s ease-out both; }
   .fx-banner { animation: fxdrop .42s ease-out both; }
-  .fx-star { animation: fxstar .55s ease-out both; animation-delay: var(--d, 0ms); }
   #g-card { transition: box-shadow .3s; }
   #game.edge10::after { animation: fxfade .3s ease-out both; }
 }
@@ -394,8 +391,6 @@ button.sw { padding: 0; cursor: pointer; }
 @keyframes fxedge { 0% { opacity: .55; } 100% { opacity: 1; } }
 .combo.c3 { --s: 1.08; } .combo.c5 { --s: 1.16; } .combo.c10 { --s: 1.26; }
 @media (prefers-reduced-motion: no-preference) {
-  .fx-star { animation: fxtwinkle 1.3s ease-in-out var(--d, 0ms) infinite; }
-  .fx-star.in { animation: fxstar .55s ease-out var(--d, 0ms) both, fxtwinkle 1.3s ease-in-out calc(var(--d, 0ms) + .55s) infinite; }
   .fx-banner { animation: fxribbon 1.2s ease-in-out infinite; }
   .fx-banner.t10 { animation-duration: .9s; }
   .fx-banner.in { animation: fxdrop .42s ease-out both, fxribbon 1.2s ease-in-out .42s infinite; }
