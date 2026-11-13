@@ -724,3 +724,16 @@ button.sw { padding: 0; cursor: pointer; }
 @media (max-width: 360px) { .sent.drag { gap: 8px 6px; } }
 #game .sent.drag { padding: 10px 6px; }
 @media (prefers-reduced-motion: reduce) { .wd.lift { transform: none; } }
+
+/* v0.66 철자 쓰기: 글자를 문장 배열과 같은 방식으로 끌어 옮긴다(글자 모양 .wd.ltr) */
+.sent.drag.ltr { gap: 8px 6px; padding: 12px 8px; }
+.wd.ltr { width: 46px; height: 54px; padding: 0; border-radius: 12px; font-size: 28px; }
+.sent.ltr.sm .wd.ltr { width: 42px; height: 50px; font-size: 25px; }
+.sent.ltr.xs .wd.ltr { width: 34px; height: 44px; font-size: 20px; border-radius: 9px; border-width: 2px; }
+@media (max-height: 720px) {
+  #game .sent.ltr { padding: 8px 6px; }
+  #game .wd.ltr { width: 42px; height: 48px; font-size: 24px; }
+  #game .sent.ltr.sm .wd.ltr { width: 38px; height: 44px; font-size: 22px; }
+  #game .sent.ltr.xs .wd.ltr { width: 32px; height: 40px; font-size: 18px; }
+}
+@media (max-width: 340px) { .wd.ltr { width: 40px; height: 48px; font-size: 24px; } .sent.ltr.sm .wd.ltr { width: 36px; height: 44px; font-size: 22px; } .sent.ltr.xs .wd.ltr { width: 30px; height: 40px; font-size: 18px; } }

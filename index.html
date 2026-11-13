@@ -33,7 +33,7 @@
     <div class="lvgrid" id="stage-list"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
     <p class="betabadge" id="beta-badge" style="display:none"></p><!-- BETA-TEST -->
-    <p class="ver">v0.65</p>
+    <p class="ver">v0.66</p>
   </section>
 
   <!-- 2. 모드 선택 -->
@@ -44,7 +44,7 @@
     <p class="mprog" id="modes-prog"></p>
     <button class="chunk mode" data-start="letter" style="--c:var(--green)"><span class="no pop">1</span><span><div class="name">글자 맞추기</div><div class="desc">빈칸에 들어갈 알파벳 고르기</div></span><span class="mg none" data-mg="letter">-</span></button>
     <button class="chunk mode" data-start="meaning" style="--c:var(--blue)"><span class="no pop">2</span><span><div class="name">뜻 맞추기</div><div class="desc">영어 단어의 뜻 고르기</div></span><span class="mg none" data-mg="meaning">-</span></button>
-    <button class="chunk mode" data-start="spell" style="--c:var(--orange)"><span class="no pop">3</span><span><div class="name">철자 쓰기</div><div class="desc">섞인 글자를 눌러 단어 만들기</div></span><span class="mg none" data-mg="spell">-</span></button>
+    <button class="chunk mode" data-start="spell" style="--c:var(--orange)"><span class="no pop">3</span><span><div class="name">철자 쓰기</div><div class="desc">섞인 글자를 끌어 단어 만들기</div></span><span class="mg none" data-mg="spell">-</span></button>
     <button class="chunk mode" data-start="sentence" style="--c:var(--pink)"><span class="no pop">4</span><span><div class="name">문장 배열</div><div class="desc">섞인 단어 카드를 끌어 문장 만들기</div></span><span class="mg none" data-mg="sentence">-</span></button>
     <button class="chunk mode" data-start="listen" style="--c:#8A5CF6"><span class="no pop">5</span><span><div class="name">듣기</div><div class="desc">소리를 듣고 답 고르기</div></span><span class="mg none" data-mg="listen">-</span><span class="soonchip" id="listen-chip" style="display:none">소리 없음</span></button>
     <button class="chunk mode lt" id="lt-row" style="--c:#FFC83A"><span class="no pop">⭐</span><span><div class="name">레벨업 테스트</div><div class="desc" id="lt-desc">영단어 직소 · 레벨당 1번 도전</div></span><span class="tag" id="lt-tag">도전!</span></button>
@@ -64,7 +64,7 @@
     <div class="opts" id="g-opts"></div>
     <div class="foot" id="g-foot">
       <button class="hint keys" id="g-hint" aria-label="힌트"></button>
-      <button class="erase" id="g-erase" style="display:none" disabled>지우기</button>
+      <button class="erase" id="g-erase" style="display:none" disabled>확인</button>
       <button class="btn next" id="g-next" style="display:none">다음 문제</button>
       <span class="combo"><svg class="ic"><use href="#i-fire"/></svg>연속 <span id="g-combo">0</span></span>
     </div>
