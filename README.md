@@ -73,4 +73,5 @@
 | `data/words.js`, `data/sentences.js` | 단어(Lv1~91)·문장 데이터 |
 | `data/words-adv.js` | 고급 단어 데이터(Octanove, CC BY-SA 4.0) |
 | `data/sound.js` | 단어 발음 기호(CMU 발음 사전, 듣기 모드 비슷한 발음 보기용) |
+| `data/dialogs.js` | 듣기 모드 대답 고르기 문제 120개(마스터~전설 등급별 30개, 직접 작성) |
 | `fonts/` | Pretendard 글꼴과 라이선스 |

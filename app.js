@@ -237,7 +237,11 @@
     if (h) h.textContent = !lim ? "누르면 다시 들려요" : off ? "다시 듣기를 다 썼어요" : "다시 듣기 " + left + "회 남음";
     b.setAttribute("aria-label", !lim ? "다시 듣기" : "다시 듣기 " + (off ? 0 : left) + "회 남음");
   }
-  function hideReplayNote(q) { var h = document.querySelector("#g-card .hint2"); if (h && q.kind === "sentence") h.style.display = "none"; }   // 문장 듣기는 답한 뒤 칸이 모자라 안내 줄을 숨긴다
+  function hideReplayNote(q) { var h = document.querySelector("#g-card .hint2"); if (h && isLong(q)) h.style.display = "none"; }   // 문장·대답 고르기는 답한 뒤 칸이 모자라 안내 줄을 숨긴다
+  function isLong(q) { return q.kind === "sentence" || q.kind === "dialog"; }   // 보기가 문장인 듣기 유형(보기 한 줄 1개 배치)
+  // 답한 뒤 풀이(v0.61 대답 고르기): 영어 질문(굵게)·한글 뜻(작게) 두 줄
+  function revealDlg(q) { var r = el("div", "reveal dl"); r.appendChild(el("b", "", q.en)); r.appendChild(el("span", "", q.ko)); var c = $("g-card"); c.dataset.a = "1"; return r; }
+  function revealOf(q) { return q.kind === "dialog" ? revealDlg(q) : el("div", "reveal", q.kind === "sentence" ? q.ko : q.en + " = " + q.ko); }
   function speakCurrent(manual) {
     if (!cur || cur.mode !== "listen") return;
     var q = Game.current(cur), b = $("g-spk");
@@ -250,7 +254,7 @@
     function off() { if (playTimer) { clearTimeout(playTimer); playTimer = null; } b.classList.remove("on"); beginLimit(); }
     b.classList.add("on");
     if (playTimer) clearTimeout(playTimer);
-    playTimer = setTimeout(off, q.kind === "sentence" ? 8000 : 4000);
+    playTimer = setTimeout(off, isLong(q) ? 8000 : 4000);
     if (!Sound.ok() || !Sound.speak(q.en, null, off, q.rate)) off();
   }
 
@@ -371,10 +375,10 @@
         opts[i].classList.add(i === q.answer ? "right" : "dim");
       }
       if (cur.mode === "letter") { var tl = $("g-tiles").children[q.blank]; tl.textContent = q.options[q.answer]; tl.className = "bad"; }
-      if (cur.mode === "listen") { $("g-card").appendChild(el("div", "reveal", q.kind === "sentence" ? q.ko : q.en + " = " + q.ko)); hideReplayNote(q); }
-      ans = q.kind === "sentence" ? "\"" + q.en + "\"" : q.en + " = " + q.ko;
+      if (cur.mode === "listen") { $("g-card").appendChild(revealOf(q)); hideReplayNote(q); }
+      ans = q.kind === "dialog" ? "초록색 대답" : q.kind === "sentence" ? "\"" + q.en + "\"" : q.en + " = " + q.ko;
     }
-    feedback(r, q, "시간이 다 됐어요. 정답: " + ans);
+    feedback(r, q, q.kind === "dialog" ? "시간이 다 됐어요. 초록색이 정답이에요" : "시간이 다 됐어요. 정답: " + ans);
   }
 
   var spell = null;     // 철자 쓰기 진행: {seq:[{t:타일번호, lock:힌트로 채움}]}
@@ -431,7 +435,8 @@
     $("g-erase").style.display = isOrder ? "" : "none";
     spell = isOrder ? { seq: [] } : null;
     var card = $("g-card"); card.textContent = "";
-    card.dataset.k = (cur.mode === "listen" && q.kind === "sentence") ? "s" : "";
+    card.dataset.k = (cur.mode === "listen" && isLong(q)) ? "s" : "";
+    delete card.dataset.a;   // 답한 뒤 표시(v0.61 대답 고르기에서 낮은 화면 압축에 쓴다)
     fxShow(false);   // 연속이 이어지는 동안 새 문제에서도 연출 유지
     var box = $("g-opts"); box.textContent = "";
     box.className = "opts";
@@ -467,7 +472,10 @@
       box.className = "wpool";
       renderSpell();
     } else if (cur.mode === "listen") {
-      card.appendChild(el("div", "sub", q.kind === "sentence" ? "소리를 듣고 알맞은 문장을 골라 주세요" : q.kind === "mean" ? "소리를 듣고 알맞은 뜻을 골라 주세요" : "소리를 듣고 알맞은 단어를 골라 주세요"));
+      if (q.kind === "dialog") {   // 대답 고르기: 질문 글자가 화면에 없어서 헷갈리지 않게 안내 문구를 반짝이는 배지로 크게 보여 준다
+        var dq = el("div", "sub dq"); dq.appendChild(el("i", "", "✦")); dq.appendChild(el("span", "", "질문을 듣고 알맞은 대답을 골라 주세요")); dq.appendChild(el("i", "", "✦"));
+        card.appendChild(dq);
+      } else card.appendChild(el("div", "sub", q.kind === "sentence" ? "소리를 듣고 알맞은 문장을 골라 주세요" : q.kind === "mean" ? "소리를 듣고 알맞은 뜻을 골라 주세요" : "소리를 듣고 알맞은 단어를 골라 주세요"));
       var sp = el("button", "spk"); sp.id = "g-spk"; sp.setAttribute("aria-label", "다시 듣기");
       sp.innerHTML = '<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z" fill="#fff"/><path d="M15.5 9a4.2 4.2 0 010 6"/><path d="M18 6.5a8 8 0 010 11"/></svg>';
       card.appendChild(sp);
@@ -478,14 +486,14 @@
     }
     if (!isOrder) {
       for (var k = 0; k < q.options.length; k++) {
-        var b = el("button", "opt" + (cur.mode === "meaning" ? " txt" : cur.mode === "listen" ? (q.kind === "sentence" ? " en sl" : q.kind === "mean" ? " txt" : " en") : ""), q.options[k]);
+        var b = el("button", "opt" + (cur.mode === "meaning" ? " txt" : cur.mode === "listen" ? (isLong(q) ? " en sl" : q.kind === "mean" ? " txt" : " en") : ""), q.options[k]);
         b.dataset.i = String(k);
         box.appendChild(b);
       }
     }
     var first = box.querySelector(".opt");
     if (first) first.focus();
-    if (cur.mode === "listen") { if (q.kind === "sentence") box.classList.add("sl"); drawReplays(); fitListen(); setTimeout(speakCurrent, 250); }   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
+    if (cur.mode === "listen") { if (isLong(q)) box.classList.add("sl"); drawReplays(); fitListen(); setTimeout(speakCurrent, 250); }   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
   }
 
   // 철자 쓰기: 칸과 타일을 현재 입력(spell.seq)에 맞게 다시 그린다
@@ -566,7 +574,7 @@
     lastStage = stage; lastMode = mode; lastReview = false;
     $("game").classList.remove("review");
     if (mode === "listen" && !Sound.ok()) return false;
-    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode), sentences: mode === "listen" ? wordsOfStage(stage, "sentence") : undefined, sound: mode === "listen" && typeof SOUND !== "undefined" ? SOUND : undefined, allWords: mode === "listen" ? ALLW : undefined });
+    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode), sentences: mode === "listen" ? wordsOfStage(stage, "sentence") : undefined, dialogs: mode === "listen" && typeof DIALOGS !== "undefined" ? DIALOGS[String(Game.bandOf(stage))] : undefined, sound: mode === "listen" && typeof SOUND !== "undefined" ? SOUND : undefined, allWords: mode === "listen" ? ALLW : undefined });
     if (!g) return false;
     cur = g;
     show("game");
@@ -640,8 +648,8 @@
       tl.textContent = q.options[q.answer];
       tl.className = r.correct ? "fill" : "bad";
     }
-    if (cur.mode === "listen") { $("g-card").appendChild(el("div", "reveal", q.kind === "sentence" ? q.ko : q.en + " = " + q.ko)); hideReplayNote(q); }
-    feedback(r, q, (cur.mode === "meaning" || q.kind === "mean") ? "아쉬워요. " + q.en + " = " + q.ko : q.kind === "sentence" ? "아쉬워요. 정답은 \"" + q.en + "\"예요" : "아쉬워요. 정답은 " + q.en + "이에요");
+    if (cur.mode === "listen") { $("g-card").appendChild(revealOf(q)); hideReplayNote(q); }
+    feedback(r, q, q.kind === "dialog" ? "아쉬워요. 초록색이 정답이에요" : (cur.mode === "meaning" || q.kind === "mean") ? "아쉬워요. " + q.en + " = " + q.ko : q.kind === "sentence" ? "아쉬워요. 정답은 \"" + q.en + "\"예요" : "아쉬워요. 정답은 " + q.en + "이에요");
   }
 
   function next() {
@@ -767,7 +775,7 @@
       $("r-correct2").textContent = r.correct + " / " + r.answered;
       $("r-combo").textContent = String(r.bestCombo);
       $("r-new-l").textContent = lastMode === "sentence" ? "힌트 사용" : "틀린 단어";
-      $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : r.wrongIds.length);
+      $("r-new").textContent = String(lastMode === "sentence" ? r.hintsUsed : r.wrongIds.filter(function (id) { return wordById(id); }).length);
       showRecord(r, prevBest, perfect);
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));

@@ -6,6 +6,7 @@
 //  - 등급: 정답 10개 S, 9개 A, 7~8개 B, 6개 이하 C (체력 0 종료도 C)
 //  - 듣기 등급별 난이도(v0.59): 등급(Lv 1~9=0, 10~19=1 … 90~99=9)이 오를수록 문장 듣기 개수(=등급 번호)·소리 속도·오답 보기 비슷함(단어는 첫 글자, 문장은 길이)이 올라가고, 다시 듣기 횟수가 줄어든다(listenCfg). 복습 판은 기존 규칙
 //  - 듣기 유형(v0.60): a 쉬운 단어 보기(같은 레벨 무작위) / b 비슷한 발음 단어 보기 / c 소리를 듣고 한글 뜻 고르기(오답 뜻 = 비슷한 발음 단어의 뜻, 제한시간 2배). 등급별 비율은 LISTEN_MIX, 발음은 data/sound.js(SOUND)
+//  - 듣기 유형 d(v0.61): 영어 질문을 듣고 알맞은 대답(영어 문장) 고르기, 마스터~전설 전용, 제한시간 2배. 문제는 data/dialogs.js(DIALOGS[등급번호]), 단어가 아니므로 틀려도 복습 목록에 넣지 않는다(id가 dg로 시작)
 //  - 틀린 단어 복습(v0.30): review=true면 체력·종료 없음, total(문제 수)은 10 이하, ordered면 받은 순서대로 출제
 var Game = (function () {
   "use strict";
@@ -69,12 +70,12 @@ var Game = (function () {
   var LISTEN_RATE = [0.85, 0.85, 0.85, 0.9, 0.9, 0.9, 0.95, 0.95, 1.0, 1.0];
   var LISTEN_REPLAYS = [0, 0, 0, 0, 0, 3, 3, 2, 2, 1];
   function bandOf(lv) { return (typeof lv === "number" && lv >= 10) ? Math.min(9, Math.floor(lv / 10)) : 0; }
-  // 등급별 유형 비율(v0.60, 10문제 중 [a 쉬운 단어, b 비슷한 발음 단어, c 한글 뜻]) — 문장 듣기(v0.59)는 중단(sent 0)
-  var LISTEN_MIX = [[10, 0, 0], [10, 0, 0], [7, 3, 0], [4, 6, 0], [2, 8, 0], [0, 10, 0], [0, 6, 4], [0, 3, 7], [0, 0, 10], [0, 0, 10]];
+  // 등급별 유형 비율(v0.61, 10문제 중 [a 쉬운 단어, b 비슷한 발음 단어, c 한글 뜻, d 질문 듣고 대답 고르기]) — 문장 듣기(v0.59)는 중단(sent 0). d는 대화 데이터가 없으면 c(발음 데이터도 없으면 a)로 대신한다
+  var LISTEN_MIX = [[10, 0, 0, 0], [10, 0, 0, 0], [7, 3, 0, 0], [4, 6, 0, 0], [2, 8, 0, 0], [0, 10, 0, 0], [0, 5, 2, 3], [0, 3, 3, 4], [0, 0, 5, 5], [0, 0, 4, 6]];
   // 비슷한 발음 보기의 허용 발음 거리(발음 기호 몇 개가 다른가) 우선순서: 견습생·싸움꾼 2~3칸, 전사·정예 1~2칸, 마스터 이상 1칸부터
   var SOUND_NEAR = [[[1], [2], [3]], [[1], [2], [3]], [[2, 3], [1]], [[2, 3], [1]], [[1, 2], [3]], [[1, 2], [3]], [[1], [2], [3]], [[1], [2], [3]], [[1], [2], [3]], [[1], [2], [3]]];
   function listenCfg(lv, review) {
-    if (review) return { sent: 0, mix: [10, 0, 0], near: SOUND_NEAR[0], rate: 0.85, replays: 0, sim: 0 };
+    if (review) return { sent: 0, mix: [10, 0, 0, 0], near: SOUND_NEAR[0], rate: 0.85, replays: 0, sim: 0 };
     var b = bandOf(lv);
     return { sent: 0, mix: LISTEN_MIX[b], near: SOUND_NEAR[b], rate: LISTEN_RATE[b], replays: LISTEN_REPLAYS[b], sim: 0 };
   }
@@ -198,6 +199,12 @@ var Game = (function () {
     return { id: w.id, en: w.en, ko: w.ko, options: p.options, answer: p.answer, kind: "mean", rate: cfg.rate, mul: 2, mates: m.length };
   }
 
+  // 듣기(질문 듣고 대답 고르기, v0.61): 영어 질문을 소리로 듣고 알맞은 대답(영어 문장) 4개 중 하나를 고른다. 항목 = [질문, 질문 뜻, 정답, [오답 3개]]. 제한시간 2배(mul)
+  function dialogQuestion(item, n, cfg, rng) {
+    var p = place(shuffle(item[3], rng), item[2], rng);
+    return { id: "dg" + n, en: item[0], ko: item[1], reply: item[2], options: p.options, answer: p.answer, kind: "dialog", rate: cfg.rate, mul: 2 };
+  }
+
   // 문장 배열: 공백으로 단어를 나눠 섞는다(섞은 결과가 원문 순서와 같지 않게)
   function sentenceQuestion(s, rng) {
     var tokens = s.en.split(" "), mixed = tokens, t = 0;
@@ -218,13 +225,18 @@ var Game = (function () {
     var sents = (lcfg && lcfg.sent > 0 && o.sentences && o.sentences.length >= 4) ? o.sentences : null;
     var ns = sents ? Math.min(lcfg.sent, total, sents.length) : 0;   // 문장 듣기 개수(문장이 부족하면 줄임)
     var snd = (lcfg && o.sound && o.allWords) ? o.sound : null;   // 발음 데이터가 없으면 비슷한 발음·한글 뜻 유형은 쉬운 단어 유형으로 대신한다
-    var nb = snd ? Math.min(lcfg.mix[1], total - ns) : 0, nc = snd ? Math.min(lcfg.mix[2], total - ns - nb) : 0;
+    var dlg = (lcfg && lcfg.mix[3] > 0 && o.dialogs && o.dialogs.length >= 4) ? o.dialogs : null;   // 대화 데이터가 없으면 d는 c로 대신
+    var nb = snd ? Math.min(lcfg.mix[1], total - ns) : 0;
+    var nd = dlg ? Math.min(lcfg.mix[3], total - ns - nb, dlg.length) : 0;
+    var nc = snd ? Math.min(lcfg.mix[2] + (lcfg.mix[3] - nd), total - ns - nb - nd) : 0;
     var kinds = [];
-    for (var k = 0; k < total; k++) kinds.push(k < ns ? "s" : k < ns + nb ? "b" : k < ns + nb + nc ? "c" : "w");
+    for (var k = 0; k < total; k++) kinds.push(k < ns ? "s" : k < ns + nb ? "b" : k < ns + nb + nc ? "c" : k < ns + nb + nc + nd ? "d" : "w");
     kinds = shuffle(kinds, rng);
+    var dlgPick = nd > 0 ? shuffle(dlg.map(function (x, n) { return { x: x, n: n }; }), rng).slice(0, nd) : [], di = 0;
     var sentPick = ns > 0 ? shuffle(sents, rng).slice(0, ns) : [], si = 0;
     for (var i = 0; i < picked.length; i++) {
       if (lcfg && kinds[i] === "b") { qs.push(soundQuestion(picked[i], pool, o.allWords, snd, lcfg, rng)); continue; }
+      if (lcfg && kinds[i] === "d") { qs.push(dialogQuestion(dlgPick[di].x, dlgPick[di].n, lcfg, rng)); di++; continue; }
       if (lcfg && kinds[i] === "c") { qs.push(meanListenQuestion(picked[i], pool, o.allWords, snd, lcfg, rng)); continue; }
       if (lcfg && kinds[i] === "s") { qs.push(listenSentenceQuestion(sentPick[si++], sents, rng, lcfg)); continue; }
       qs.push(o.mode === "letter" ? letterQuestion(picked[i], rng) :
@@ -351,5 +363,5 @@ var Game = (function () {
     return { grade: grade(g), score: g.score, correct: g.correct, answered: g.answered, bestCombo: g.bestCombo, over: g.over, hintsUsed: g.hintsMax - g.hintsLeft, correctIds: g.correctIds.slice(), wrongIds: g.wrongIds.slice(), total: g.total, review: g.review };
   }
 
-  return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, hintsFor: hintsFor, listenCfg: listenCfg, phDist: phDist, replay: replay, limitFor: limitFor, timeout: timeout, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
+  return { TOTAL: TOTAL, MAX_HP: MAX_HP, HINTS: HINTS, hintsFor: hintsFor, bandOf: bandOf, listenCfg: listenCfg, phDist: phDist, replay: replay, limitFor: limitFor, timeout: timeout, start: start, current: current, pick: pick, submit: submit, hintSpell: hintSpell, hint: hint, advance: advance, result: result, grade: grade };
 })();

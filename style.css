@@ -657,3 +657,21 @@ button.sw { padding: 0; cursor: pointer; }
   #game #g-card[data-k="s"] .reveal { font-size: 15px; margin-top: 4px; line-height: 1.25; }
   #game #g-card[data-k="s"] .spk { margin: 0 auto 0; }
 }
+
+/* ===== v0.61 듣기 대답 고르기(질문을 듣고 알맞은 대답): 안내 문구 강조 배지(분홍·반짝임·빛줄기), 답한 뒤 풀이 두 줄 ===== */
+.q .sub.dq { display: inline-flex; align-items: center; gap: 8px; position: relative; overflow: hidden; background: linear-gradient(180deg, #FF8CC4, #FF6FAE); color: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 5px 16px; font-size: 15px; font-weight: 700; line-height: 1.25; text-shadow: 0 2px 0 rgba(36,51,107,.6); box-shadow: 0 4px 0 var(--ink), 0 0 0 4px rgba(255,111,174,.35); margin: 2px 0 4px; word-break: keep-all; animation: dqgl 1.6s ease-in-out infinite alternate; }
+.q .sub.dq i { font-style: normal; display: inline-block; color: #FFE27A; animation: dqtw 1.4s ease-in-out infinite; }
+.q .sub.dq i:last-child { animation-delay: .7s; }
+.q .sub.dq::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 36%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent); transform: translateX(-130%) skewX(-20deg); animation: dqsh 2.6s ease-in-out infinite; pointer-events: none; }
+@keyframes dqgl { 0% { box-shadow: 0 4px 0 var(--ink), 0 0 0 4px rgba(255,111,174,.25), 0 0 8px 2px rgba(255,111,174,.35); } 100% { box-shadow: 0 4px 0 var(--ink), 0 0 0 4px rgba(255,111,174,.6), 0 0 22px 8px rgba(255,111,174,.8); } }
+@keyframes dqtw { 0%, 100% { transform: scale(1) rotate(0); opacity: 1; } 50% { transform: scale(1.45) rotate(18deg); opacity: .55; } }
+@keyframes dqsh { 0% { transform: translateX(-130%) skewX(-20deg); } 60%, 100% { transform: translateX(330%) skewX(-20deg); } }
+@media (prefers-reduced-motion: reduce) { .q .sub.dq, .q .sub.dq i, .q .sub.dq::after { animation: none; } }
+#g-card .reveal.dl { display: block; text-align: center; word-break: keep-all; }
+#g-card .reveal.dl b { display: block; font-size: 15px; line-height: 1.25; color: var(--ink); }
+#g-card .reveal.dl span { display: block; font-size: 13px; line-height: 1.3; color: #6B7A99; margin-top: 2px; font-weight: 600; }
+@media (max-height: 600px) {
+  #game #g-card[data-k="s"][data-a="1"] .spk { display: none; }   /* 답한 뒤 낮은 화면: 소리 버튼을 숨겨 풀이 칸을 확보 */
+  #g-card .reveal.dl b { font-size: 14px; }
+  #g-card .reveal.dl span { font-size: 12px; }
+}
