@@ -675,3 +675,37 @@ button.sw { padding: 0; cursor: pointer; }
   #g-card .reveal.dl b { font-size: 14px; }
   #g-card .reveal.dl span { font-size: 12px; }
 }
+
+/* ===== v0.62 레벨업 테스트 / 영단어 직소 ===== */
+#modes .mode.lt { background: #FFF6D6; }
+#modes .mode.lt .no { background: #FFC83A; font-size: 19px; }
+#modes .mode.lt.lock { background: #E4EBF5; border-color: #8C9AB8; box-shadow: 0 4px 0 #8C9AB8; }
+#modes .mode.lt.lock .no { background: #C9D3E6; border-color: #8C9AB8; box-shadow: none; }
+#modes .mode.lt.lock .name { color: #7C8AA8; }
+#modes .mode.lt.lock .desc { color: #8C9AB8; }
+#modes .mode.lt .tag { margin-left: auto; font-size: 12px; font-weight: 700; border: 2px solid var(--ink); border-radius: 999px; padding: 2px 9px; background: #FFC83A; flex: none; }
+#modes .mode.lt.lock .tag { background: #fff; border-color: #8C9AB8; color: #7C8AA8; }
+#modes .mode.lt.done .tag { background: #D9F3D9; }
+.lt-pop h3 { margin: 0 0 6px; font-size: 20px; }
+.lt-pop p { margin: 0 0 8px; font-size: 14px; line-height: 1.45; }
+.lt-pop p.fine { font-size: 12px; color: #6a769b; }
+#game .cws { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+#game .cl { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; border: 2px solid transparent; border-radius: 10px; padding: 2px 8px; text-align: left; opacity: .55; }
+#game .cl b { flex: none; font-size: 12px; background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; }
+#game .cl.on { opacity: 1; background: #FFF1B8; border-color: var(--ink); }
+#game .cw { display: grid; justify-content: center; gap: 2px; margin: 6px auto 0; }
+#game .cw span { position: relative; display: grid; place-items: center; font-weight: 700; color: #24336B; border-radius: 6px; background: transparent; }
+#game .cw span.c { background: #fff; border: 2px solid #24336B; }
+#game .cw span.act { background: #FFF1B8; }
+#game .cw span.st { background: #D9F3D9; }
+#game .cw span.st b { position: absolute; top: 1px; left: 3px; font-size: 9px; line-height: 1; color: #2D7A2D; }
+#game .cw span.x { background: #FFC83A; }
+#game .cw span.ok { background: #D9F3D9; color: #1E7A1E; }
+#game .cw span.bad { background: #FFE0E3; color: #E0334C; }
+#game .opts.cw2 { gap: 8px; }
+#game .opts.cw2 .opt { height: 50px; font-size: 20px; padding: 0 4px; white-space: nowrap; }
+#game .opts.cw2.lt .opt { height: 58px; font-size: 30px; }
+@media (max-height: 640px) {
+  #modes .mode { min-height: 46px; }
+  #modes .mode .no { width: 34px; height: 34px; }
+}

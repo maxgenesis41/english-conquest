@@ -52,6 +52,7 @@
   function lockMsg() {
     var f = frontierLv(), req = requiredModes(), x = EJ.xp(f, req), left = EJ.reviewLeft(f);
     if (x.cur === x.total && left > 0) showToast("틀린 단어 복습 " + left + "개를 마쳐야 해요", lvName(f) + " 경험치는 가득 찼어요");
+    else if (x.cur === x.total) showToast(lvName(f) + " 레벨업 테스트를 통과해야 해요", "모드 목록의 레벨업 테스트에서 퍼즐 " + EJ.passNeed(f) + "개를 완성하세요");
     else showToast(lvName(f) + " 경험치를 모두 채워야 해요", "경험치 " + x.cur + "/" + x.total + " (모드마다 A 이상 " + x.per + "회)");
   }
 
@@ -570,7 +571,7 @@
   }
 
   function startGame(stage, mode) {
-    clearTimer();
+    clearTimer(); jigLeave();
     lastStage = stage; lastMode = mode; lastReview = false;
     $("game").classList.remove("review");
     if (mode === "listen" && !Sound.ok()) return false;
@@ -584,7 +585,7 @@
 
   // 틀린 단어 복습 시작: 그 레벨의 틀린 단어를 오래된 순으로 최대 10개, 뜻 맞추기 방식(체력·점수·힌트 없음)
   function startReview(stage) {
-    clearTimer();
+    clearTimer(); jigLeave();
     var its = EJ.get("review").items, ws = [], i;
     for (i = 0; i < its.length; i++) if (its[i].lv === stage) { var w = wordById(its[i].id); if (w) ws.push(w); }
     if (!ws.length) return false;
@@ -709,7 +710,7 @@
     else if (!left) ban.appendChild(el("div", "banner up", lvName(stage) + " 복습을 모두 마쳤어요!"));
     else if (r.correct) ban.appendChild(el("div", "banner up", "맞힌 " + r.correct + "개는 목록에서 빠졌어요!"));
     var nb = $("r-next"), ag = $("r-again");
-    nb.dataset.act = "";
+    nb.dataset.act = ""; ag.dataset.act = ""; ag.querySelector(".t").textContent = "다시"; ag.querySelector(".s").textContent = "같은 게임";
     ag.style.display = "none";
     if (left) { nb.style.display = ""; nb.className = "btn ib"; nb.querySelector(".t").textContent = "다시 복습"; $("r-next-s").textContent = "남은 " + left + "개"; }
     else nb.style.display = "none";
@@ -780,6 +781,7 @@
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
       if (unlockMsg) { ban.appendChild(unlockBanner(lastStage + 1)); ufxStart(); }   // v0.57: 레벨 열림 축하 연출
+      else if (pendNext && after && !after.unlocked && ltState(lastStage) === "go") ban.appendChild(el("div", "banner up", "레벨업 테스트에 도전하세요!"));   // v0.63: 경험치·복습을 채우면 테스트 통과가 남는다
       else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "경험치 +1! (" + xpNow.cur + "/" + xpNow.total + ")" : "이 모드 칸은 가득 찼어요 (" + xpNow.cur + "/" + xpNow.total + ")"));
       var nm = pickNext(set.next);
       var nb = $("r-next"), ag = $("r-again");
@@ -790,7 +792,7 @@
       var failFirst = r.over && !twoBtn;   // 체력 0: 같은 게임 다시를 1순위(초록)로
       nb.className = "btn ib" + (failFirst ? " blue" : "");
       ag.className = "btn ib" + (failFirst ? "" : " blue");
-      nb.dataset.act = "";
+      nb.dataset.act = ""; ag.dataset.act = ""; ag.querySelector(".t").textContent = "다시"; ag.querySelector(".s").textContent = "같은 게임";
       if (pending) {   // 첫 버튼을 "복습하기"로(다시·모드 버튼은 그대로)
         nb.className = "btn ib"; ag.className = "btn ib blue"; ag.style.display = "";
         nb.querySelector(".t").textContent = "복습하기"; $("r-next-s").textContent = lvName(lastStage) + " " + pendLeft + "개";
@@ -934,6 +936,162 @@
     for (var q = 0; q < ps.length; q++) ps[q].classList.toggle("on", ps[q].id === "p-" + k);
   }
 
+  // ===== 레벨업 테스트: 영단어 직소 (v0.62) =====
+  // v0.63: 다음 레벨 열림 조건. 레벨의 필수 조건(경험치 칸 가득 + 복습 0)을 채우면 도전을 제안하고, 퍼즐 5개 중 EJ.passNeed(레벨)개 이상 완성하면 통과해 다음 레벨이 열린다(실패해도 재도전 무제한). 게임 화면(#game)을 그대로 쓰고, 진행 상태는 jig에만 둔다(cur는 null).
+  var jig = null, ltAsked = {}, ltAfter = null, jigT = null;
+  function ltState(lv) {   // "pass" 통과함(다시 해 볼 수 있음) / "go" 도전 가능 / "lock" 조건 미달
+    var t = EJ.levelTest(lv);
+    if (t && t.p === true) return "pass";
+    var x = EJ.xp(lv, requiredModes());
+    return (x.cur === x.total && EJ.reviewLeft(lv) === 0) ? "go" : "lock";
+  }
+  function jigLeave() {   // 직소 화면 정리(다른 게임을 시작하거나 나갈 때)
+    if (jigT) { clearTimeout(jigT); jigT = null; }
+    jig = null;
+    $("game").classList.remove("jig");
+  }
+  function ltOffer(after) {   // 도전 제안 팝업. 띄웠으면 true(레벨당 이 접속에서 한 번만 제안한다. 모드 목록의 줄은 계속 남는다)
+    var lv = lastStage, nx = EJ.get("progress").lvs[String(lv + 1)];
+    if (ltAsked[lv] || ltState(lv) !== "go" || !nx || nx.unlocked) return false;   // 다음 레벨이 이미 열려 있으면 제안하지 않는다(모드 목록 줄은 남는다)
+    ltAsked[lv] = true; ltAfter = after;
+    $("lt-text").textContent = lvName(lv) + "의 필수 조건을 모두 채웠어요! 영단어 직소 퍼즐 " + Jig.COUNT + "개 중 " + EJ.passNeed(lv) + "개를 완성하면 다음 레벨이 열려요. 도전해 볼까요?";
+    $("lt-modal").style.display = "grid";
+    $("lt-go").focus();
+    return true;
+  }
+  function ltRowClick() {
+    var st = ltState(lastStage);
+    if (st === "lock") { showToast("레벨업 테스트는 아직 잠겨 있어요", "경험치 칸을 채우고 복습을 마치면 열려요"); return; }
+    if (wordsOfStage(lastStage).length < 10) return;
+    ltAsked[lastStage] = true;
+    startJig(lastStage);
+  }
+  function startJig(lv) {
+    clearTimer(); jigLeave();
+    var data = Jig.build({ lv: lv, band: Game.bandOf(lv), words: ALLW });
+    if (!data) { showToast("퍼즐을 준비하지 못했어요"); return false; }
+    lastStage = lv; lastReview = false; cur = null; spell = null;
+    jig = { lv: lv, d: data, pi: 0, si: 0, picked: null, correct: 0, full: 0, pOk: true, got: {} };
+    $("game").classList.add("review", "jig");
+    $("g-rtag").textContent = "레벨업 테스트 · " + lvName(lv);
+    show("game");
+    jigRender();
+    return true;
+  }
+  function jigStep() { var p = jig.d.puzzles[jig.pi]; return { p: p, k: p.steps[jig.si] }; }
+  function jigRender() {
+    var s = jigStep(), p = s.p, k = s.k, card = $("g-card"), box = $("g-opts"), o = p.o[k];
+    $("g-count").textContent = (jig.pi + 1) + " / " + jig.d.puzzles.length;
+    $("g-bar").style.width = (jig.pi * 100 / jig.d.puzzles.length) + "%";
+    $("g-foot").classList.remove("fb"); $("g-next").style.display = "none";
+    card.textContent = ""; delete card.dataset.a; card.dataset.k = "";
+    box.textContent = ""; box.className = "opts cw2" + (k === "x" ? " lt" : "");
+    card.appendChild(el("div", "sub", k === "a" ? "가로 ① 단어를 골라 주세요" : k === "d" ? "세로 ② 단어를 골라 주세요" : "겹치는 칸의 알파벳은?"));
+    jig.sub = card.firstChild;
+    var cs = el("div", "cws");
+    function clue(n, lab, ko, on) { var e = el("div", "cl" + (on ? " on" : "")), b = el("b", "", lab); e.appendChild(b); e.appendChild(document.createTextNode(ko)); return e; }
+    cs.appendChild(clue(1, "가로 ①", p.a.ko, k === "a"));
+    cs.appendChild(clue(2, "세로 ②", p.d.ko, k === "d"));
+    card.appendChild(cs);
+    var grid = el("div", "cw"); card.appendChild(grid); jig.grid = grid;
+    jigGrid(false);
+    for (var i = 0; i < o.options.length; i++) {
+      var b = el("button", "opt en", o.options[i].toUpperCase()); b.dataset.i = String(i); b.type = "button"; box.appendChild(b);
+    }
+    jig.picked = null;
+    jigFit();
+  }
+  // 격자 그리기: 정답을 맞혔거나(또는 틀려서 공개된) 단어는 글자를 채운다. reveal=true면 지금 단계의 정답까지 채운다
+  function jigGrid(reveal, wrongKind) {
+    var s = jigStep(), p = s.p, g = jig.grid, nc = p.a.en.length, nr = p.d.en.length, x, y;
+    var got = jig.got, cur = s.k;
+    if (reveal) { got = {}; for (var q in jig.got) got[q] = jig.got[q]; got[cur] = true; }
+    g.textContent = "";
+    g.style.gridTemplateColumns = "repeat(" + nc + ",var(--cs))"; g.style.gridAutoRows = "var(--cs)";
+    for (y = 0; y < nr; y++) for (x = 0; x < nc; x++) {
+      var inA = y === p.di, inD = x === p.ai, c = el("span");
+      if (!inA && !inD) { c.style.visibility = "hidden"; g.appendChild(c); continue; }
+      var isX = inA && inD, ch = "", cls = "c";
+      if (isX) ch = (got.a || got.d || (got.x && reveal)) ? p.ch : "";
+      else if (inA) ch = (x === 0 || got.a) ? p.a.en.charAt(x) : "";
+      else ch = (y === 0 || got.d) ? p.d.en.charAt(y) : "";
+      if (inA && x === 0) { cls = "c st"; c.appendChild(el("b", "", "1")); }
+      else if (inD && y === 0) { cls = "c st"; c.appendChild(el("b", "", "2")); }
+      else if (isX && cur === "x" && !reveal) { cls = "c x"; ch = "?"; }
+      else if (reveal && ((cur === "a" && inA) || (cur === "d" && inD) || (cur === "x" && isX))) cls = "c " + (wrongKind === "bad" ? "bad" : "ok");
+      else if (!reveal && ((cur === "a" && inA) || (cur === "d" && inD))) cls = "c act";
+      c.className = cls;
+      c.appendChild(document.createTextNode(ch.toUpperCase()));
+      g.appendChild(c);
+    }
+    jigFit();
+  }
+  function jigFit() {   // 칸 크기: 화면에 들어가는 가장 큰 값(12~40px). 아래에 "다음" 버튼 자리(58px)를 남긴다
+    var g = jig.grid, p = jigStep().p, nc = p.a.en.length, card = $("g-card"), box = $("g-opts"), inner = card.clientWidth - 28, best = 12, s;
+    for (s = 40; s >= 12; s--) {
+      g.style.setProperty("--cs", s + "px");
+      if (nc * s + (nc - 1) * 2 <= inner && box.getBoundingClientRect().bottom + 58 <= window.innerHeight - 6) { best = s; break; }
+    }
+    g.style.setProperty("--cs", best + "px");
+    var cells = g.children, fs = Math.max(10, Math.round(best * 0.56));
+    for (var i = 0; i < cells.length; i++) cells[i].style.fontSize = fs + "px";
+    var bs = box.children;
+    for (var j = 0; j < bs.length; j++) { var f = parseFloat(getComputedStyle(bs[j]).fontSize); while (f > 10 && bs[j].scrollWidth > bs[j].clientWidth) { f--; bs[j].style.fontSize = f + "px"; } }
+  }
+  function jigPick(i) {
+    if (!jig || jig.picked !== null) return;
+    var s = jigStep(), o = s.p.o[s.k], ok = i === o.answer, bs = $("g-opts").children, k;
+    jig.picked = i;
+    for (k = 0; k < bs.length; k++) { bs[k].disabled = true; bs[k].classList.add(k === o.answer ? "right" : k === i ? "wrong" : "dim"); }
+    if (ok) jig.correct++; else jig.pOk = false;
+    jig.got[s.k] = true;
+    jigGrid(true, "ok");   // 공개된 단어는 정답이므로 맞든 틀리든 초록으로 보여 준다
+    sfx(ok ? "correct" : "wrong");
+    jig.sub.className = "sub fbmsg " + (ok ? "good" : "bad");
+    jig.sub.textContent = ok ? "정답이에요!" : "아쉬워요. 초록색이 정답이에요";
+    if (ok) { jigT = setTimeout(jigNext, 800); }
+    else { var nb = $("g-next"); nb.textContent = "다음"; nb.style.display = "block"; $("g-foot").classList.add("fb"); nb.focus(); }
+  }
+  function jigNext() {
+    if (jigT) { clearTimeout(jigT); jigT = null; }
+    if (!jig) return;
+    var p = jig.d.puzzles[jig.pi];
+    jig.si++;
+    if (jig.si >= p.steps.length) {   // 퍼즐 하나 끝
+      if (jig.pOk) jig.full++;
+      jig.pi++; jig.si = 0; jig.pOk = true; jig.got = {};
+      if (jig.pi >= jig.d.puzzles.length) { jigFinish(); return; }
+    }
+    jigRender();
+  }
+  // 끝날 때 한 번만 저장. 완성한 퍼즐이 통과 기준 이상이면 통과 기록을 남기고(필수 조건이 갖춰져 있으면) 다음 레벨을 연다
+  function jigFinish() {
+    var j = jig, total = j.d.total, gr = Jig.grade(j.correct, total), need = EJ.passNeed(j.lv);
+    jigLeave();
+    var res = EJ.recordLevelTest(j.lv, gr, j.correct, total, j.full, requiredModes());
+    bgmSync(); resetRecord(); ufxClear();
+    $("r-label").textContent = lvName(j.lv) + " · 레벨업 테스트";
+    var badge = $("r-badge"); badge.textContent = ""; badge.className = "badge pop" + (res.passed ? "" : " gray");
+    badge.appendChild(document.createTextNode(gr));
+    $("r-score").textContent = "퍼즐 " + j.full + " / " + j.d.puzzles.length + " 완성";
+    $("r-l1").textContent = "정답"; $("r-correct2").textContent = j.correct + " / " + total;
+    $("r-l2").textContent = "통과 기준"; $("r-combo").textContent = need + "개";
+    $("r-new-l").textContent = "기록"; $("r-new").textContent = res.saved ? "저장됨" : "그대로";
+    var ban = $("r-banner"); ban.textContent = "";
+    if (res.opened) { ban.appendChild(unlockBanner(j.lv + 1)); ufxStart(); }
+    else if (res.passed) ban.appendChild(el("div", "banner up", "통과했어요!"));
+    else ban.appendChild(el("div", "banner over", "퍼즐 " + need + "개를 완성하면 통과예요. 다시 도전해 보세요!"));
+    $("r-next").style.display = "none";
+    var ag = $("r-again");
+    ag.style.display = res.passed ? "none" : ""; ag.dataset.act = "jig"; ag.className = "btn ib blue";
+    ag.querySelector(".t").textContent = "다시 도전"; ag.querySelector(".s").textContent = "새 퍼즐";
+    $("r-modes-t").textContent = "모드"; $("r-modes-s").textContent = "선택";
+    sfx(res.passed ? "clear" : "over");
+    if (res.opened) unlockSound(false);
+    $("res-modal").style.display = "grid";
+    (res.passed ? $("r-modes") : ag).focus();
+  }
+
   function show(name) {
     var screens = document.querySelectorAll(".screen");
     for (var i = 0; i < screens.length; i++) {
@@ -1000,13 +1158,18 @@
     if (empty) note.appendChild(el("div", "say bad", lvName(n) + " 단어는 아직 준비 중이에요"));
     var req = requiredModes(), nx = EJ.get("progress").lvs[String(n + 1)];
     var xn = EJ.xp(n, req);
-    $("modes-prog").textContent = "경험치 " + xn.cur + "/" + xn.total + " · 모드마다 A 이상 " + xn.per + "회" + ((nx && !nx.unlocked) ? " · 채우면 다음 레벨이 열려요" : "");
+    $("modes-prog").textContent = "경험치 " + xn.cur + "/" + xn.total + " · 모드마다 A 이상 " + xn.per + "회" + ((nx && !nx.unlocked) ? " · 채우고 레벨업 테스트를 통과하면 다음 레벨이 열려요" : "");
     var lvst = EJ.get("progress").lvs[String(n)];
     for (var mi = 0; mi < MODE_ORDER.length; mi++) {
       var mg = document.querySelector('[data-mg="' + MODE_ORDER[mi] + '"]'), g = (lvst.g && lvst.g[MODE_ORDER[mi]]) || "";
       mg.textContent = g || "-";
       mg.className = "mg" + (g ? (EJ.gradeAtLeast(g, "A") ? " ok" : "") : " none");
     }
+    var lts = ltState(n), ltr = EJ.levelTest(n), lrow = $("lt-row"), nlk = !!(nx && !nx.unlocked);   // v0.63 레벨업 테스트 줄(읽기만)
+    lrow.className = "chunk mode lt" + (lts === "lock" ? " lock" : lts === "pass" ? " done" : "");
+    $("lt-desc").textContent = lts === "lock" ? "필수 조건을 채우면 열려요" : lts === "pass" ? "영단어 직소 · 최고 " + ltr.f + "/" + Jig.COUNT + "개 완성" : "영단어 직소 · " + (nlk ? EJ.passNeed(n) + "개 완성하면 다음 레벨이 열려요" : "도전해 보세요");
+    $("lt-tag").textContent = lts === "lock" ? "잠김" : lts === "pass" ? "통과" : "도전!";
+    lrow.disabled = empty;
     var btns = document.querySelectorAll("[data-start]");
     for (var i = 0; i < btns.length; i++) btns[i].disabled = empty;
     // 듣기: 영어 음성이 없는 기기에서는 막고 안내한다
@@ -1067,20 +1230,23 @@
     }
     var rb = t.closest("[data-review]");
     if (rb && !rb.disabled) { startReview(+rb.dataset.review); return; }
+    if (t.closest("#lt-row")) { if (!$("lt-row").disabled) ltRowClick(); return; }
+    if (t.closest("#lt-go")) { $("lt-modal").style.display = "none"; ltAfter = null; startJig(lastStage); return; }
+    if (t.closest("#lt-later")) { $("lt-modal").style.display = "none"; var af = ltAfter; ltAfter = null; if (af) af(); return; }
     var st = t.closest("[data-start]");
     if (st && !st.disabled) { startGame(lastStage, st.dataset.start); return; }
     var op = t.closest(".opt");
-    if (op && !op.disabled && op.parentNode.id === "g-opts") { onPick(+op.dataset.i); return; }
+    if (op && !op.disabled && op.parentNode.id === "g-opts") { if (jig) jigPick(+op.dataset.i); else onPick(+op.dataset.i); return; }
     if (t.closest("#g-spk")) { speakCurrent(true); return; }
     if (t.closest("#g-hint")) { onHint(); return; }
     if (t.closest("#g-erase")) { spellErase(); return; }
-    if (t.closest("#g-next")) { next(); return; }
+    if (t.closest("#g-next")) { if (jig) jigNext(); else next(); return; }
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
-    if (t.closest("#exit-yes")) { freezeLimit(); tm = null; closeExit(); closeRes(); clearTimer(); Sound.stop(); cur = null; fxClear(); show("home"); return; }
-    if (t.closest("#r-next")) { closeRes(); if (lastReview || $("r-next").dataset.act === "review") { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); return; }
-    if (t.closest("#r-again")) { closeRes(); startGame(lastStage, lastMode); return; }
-    if (t.closest("#r-modes")) { closeRes(); if (lastReview) { show("review"); return; } $("modes-title").textContent = lvName(lastStage); show("modes"); return; }
+    if (t.closest("#exit-yes")) { freezeLimit(); tm = null; closeExit(); closeRes(); clearTimer(); jigLeave(); Sound.stop(); cur = null; fxClear(); show("home"); return; }
+    if (t.closest("#r-next")) { closeRes(); var rn = function () { if (lastReview || $("r-next").dataset.act === "review") { startReview(lastStage); return; } startGame(lastStage, $("r-next").dataset.mode || lastMode); }; if (!ltOffer(rn)) rn(); return; }
+    if (t.closest("#r-again")) { closeRes(); if ($("r-again").dataset.act === "jig") { startJig(lastStage); return; } var ra = function () { startGame(lastStage, lastMode); }; if (!ltOffer(ra)) ra(); return; }
+    if (t.closest("#r-modes")) { closeRes(); var rm = function () { if (lastReview) { show("review"); return; } $("modes-title").textContent = lvName(lastStage); show("modes"); }; if (!ltOffer(rm)) rm(); return; }
   });
 
   // 키보드: 방향키로 활성 보기 사이 이동 (Enter는 버튼 기본 동작)
