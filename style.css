@@ -709,3 +709,18 @@ button.sw { padding: 0; cursor: pointer; }
   #modes .mode { min-height: 46px; }
   #modes .mode .no { width: 34px; height: 34px; }
 }
+
+/* v0.65 문장 배열: 카드를 끌어 순서 바꾸기·끼워 넣기, 확인 버튼 */
+.wpool.none { display: none; }
+.sent.drag { min-height: 0; gap: 10px 8px; padding: 12px 8px; touch-action: none; }
+.sent.drag .wd { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.sent.drag.done .wd { cursor: default; }
+.sent.drag .wd.hintfill { cursor: default; }
+.wd.gap { background: rgba(61,139,255,.16); border: 3px dashed var(--blue); box-shadow: none; color: transparent; }
+.wd.lift { position: fixed; z-index: 60; pointer-events: none; background: #fff; transform: translateY(-6px) scale(1.12) rotate(-3deg); box-shadow: 0 9px 0 var(--ink), 0 16px 20px rgba(36,51,107,.28); }
+.foot .erase.ok { flex: 1 1 auto; min-width: 0; background: var(--green); color: #fff; font-size: 17px; text-shadow: 0 2px 0 rgba(36,51,107,.55); box-shadow: 0 5px 0 var(--ink), inset 0 -5px 0 rgba(0,0,0,.16), inset 0 3px 0 rgba(255,255,255,.4); }
+.foot .erase.ok:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.foot .erase.ok:disabled { opacity: .4; transform: none; box-shadow: 0 5px 0 var(--ink); }
+@media (max-width: 360px) { .sent.drag { gap: 8px 6px; } }
+#game .sent.drag { padding: 10px 6px; }
+@media (prefers-reduced-motion: reduce) { .wd.lift { transform: none; } }

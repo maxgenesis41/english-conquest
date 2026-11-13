@@ -353,6 +353,7 @@
   // 시간 초과: 오답 처리(체력 -1·틀린 단어 기록), 정답을 보여 주고 다음으로
   function onTimeout() {
     if (!cur || cur.picked != null || cur.finished) return;
+    dragEnd();
     var q = Game.current(cur), r = Game.timeout(cur), i;
     if (!r) return;
     var ans;
@@ -433,8 +434,13 @@
     setupLimit();
     bgmSync();   // 판 시작·다음 문제: 연속 정답 단계와 듣기 보호를 반영
     var isSpell = cur.mode === "spell", isSent = cur.mode === "sentence", isOrder = isSpell || isSent;
-    $("g-erase").style.display = isOrder ? "" : "none";
+    dragEnd();
+    var er = $("g-erase");
+    er.style.display = isOrder ? "" : "none";
+    er.textContent = isSent ? "확인" : "지우기";   // 문장 배열(v0.65)은 지우기 대신 확인 버튼
+    er.classList.toggle("ok", isSent);
     spell = isOrder ? { seq: [] } : null;
+    if (isSent) for (var si = 0; si < q.pool.length; si++) spell.seq.push({ t: si, lock: false });   // 카드를 모두 문장 칸에 섞어 둔다
     var card = $("g-card"); card.textContent = "";
     card.dataset.k = (cur.mode === "listen" && isLong(q)) ? "s" : "";
     delete card.dataset.a;   // 답한 뒤 표시(v0.61 대답 고르기에서 낮은 화면 압축에 쓴다)
@@ -465,13 +471,14 @@
       box.className = "pool" + (n > 8 ? " sm" : "");
       renderSpell();
     } else if (isSent) {
-      card.appendChild(el("div", "sub", "뜻에 맞게 단어를 순서대로 눌러 주세요"));
+      card.appendChild(el("div", "sub", "뜻에 맞게 카드를 끌어 순서를 바꿔 보세요"));
       var ko3 = el("div", "ko", q.ko); ko3.style.cssText = "font-size:23px;font-weight:700;margin:8px 0 12px;word-break:keep-all";
       card.appendChild(ko3);
-      var sent = el("div", "sent"); sent.id = "g-sent";
+      var sent = el("div", "sent drag"); sent.id = "g-sent";
       card.appendChild(sent);
-      box.className = "wpool";
+      box.className = "wpool none";   // 아래 카드 풀 없음(카드는 문장 칸에서 끌어 옮긴다)
       renderSpell();
+      fixSentHeight();
     } else if (cur.mode === "listen") {
       if (q.kind === "dialog") {   // 대답 고르기: 질문 글자가 화면에 없어서 헷갈리지 않게 안내 문구를 반짝이는 배지로 크게 보여 준다
         var dq = el("div", "sub dq"); dq.appendChild(el("i", "", "✦")); dq.appendChild(el("span", "", "질문을 듣고 알맞은 대답을 골라 주세요")); dq.appendChild(el("i", "", "✦"));
@@ -502,8 +509,9 @@
     var q = Game.current(cur), seq = spell.seq, arr = items(q), n = arr.length, i;
     if (cur.mode === "sentence") {
       var area = $("g-sent"); area.textContent = "";
-      if (!seq.length) area.appendChild(el("span", "ph", "단어를 눌러 문장을 만드세요"));
-      for (i = 0; i < seq.length; i++) area.appendChild(el("span", "wd" + (seq[i].lock ? " hintfill" : ""), arr[seq[i].t]));
+      for (i = 0; i < seq.length; i++) { var wc = el("span", "wd" + (seq[i].lock ? " hintfill" : ""), arr[seq[i].t]); wc.dataset.t = String(seq[i].t); area.appendChild(wc); }
+      $("g-erase").disabled = cur.picked !== null;
+      return;   // 문장 배열은 아래 카드 풀·지우기 없음
     } else {
       var slots = $("g-slots").children;
       for (i = 0; i < n; i++) {
@@ -549,6 +557,116 @@
     var q = Game.current(cur), arr = items(q), parts = [];
     for (var i = 0; i < spell.seq.length; i++) parts.push(arr[spell.seq[i].t]);
     return parts.join(cur.mode === "sentence" ? " " : "");
+  }
+
+  // ---- 문장 배열 카드 드래그(v0.65): 문장 칸의 카드를 끌어 순서를 바꾸거나 카드 사이에 끼워 넣는다
+  var drg = null;   // {el, id, x0, y0, on, fl, dx, dy}
+  function sentSyncSeq() {   // 화면 카드 순서를 spell.seq로 옮긴다
+    var ch = $("g-sent").children, seq = [];
+    for (var i = 0; i < ch.length; i++) seq.push({ t: +ch[i].dataset.t, lock: ch[i].classList.contains("hintfill") });
+    spell.seq = seq;
+  }
+  function dragEnd() {   // 드래그 중이면 현재 위치에 놓고 끝낸다(시간 초과·확인·다음 문제 때도 안전하게 정리)
+    var d = drg; drg = null;
+    if (!d) return;
+    if (d.fl && d.fl.parentNode) d.fl.parentNode.removeChild(d.fl);
+    if (d.on && d.el) {
+      d.el.className = "wd";
+      if (spell && cur && cur.mode === "sentence" && $("g-sent") && d.el.parentNode === $("g-sent")) sentSyncSeq();
+    }
+  }
+  function sentLocked() { var n = 0, ch = $("g-sent").children; while (n < ch.length && ch[n].classList.contains("hintfill")) n++; return n; }
+  function dragMove(px, py) {   // 손가락이 있는 줄에서 가운데가 손가락보다 오른쪽인 첫 카드 앞에 빈틈을 둔다
+    var area = $("g-sent"), ch = area.children, cards = [], i;
+    for (i = 0; i < ch.length; i++) if (ch[i] !== drg.el) cards.push(ch[i]);
+    if (!cards.length) return;
+    var pr = drg.el.getBoundingClientRect();
+    if (px >= pr.left && px <= pr.right && py >= pr.top - 4 && py <= pr.bottom + 4) return;   // 빈틈 위에서는 그대로
+    var row = [], minTop = 1e9, maxBot = -1e9, r;
+    for (i = 0; i < cards.length; i++) {
+      r = cards[i].getBoundingClientRect();
+      if (r.top < minTop) minTop = r.top;
+      if (r.bottom > maxBot) maxBot = r.bottom;
+      if (py >= r.top - 5 && py <= r.bottom + 5) row.push({ c: cards[i], r: r });
+    }
+    var ref;
+    if (row.length) {
+      ref = null;
+      for (i = 0; i < row.length; i++) if (row[i].r.left + row[i].r.width / 2 > px) { ref = row[i].c; break; }
+      if (!ref) ref = row[row.length - 1].c.nextSibling;
+    } else if (py > maxBot) ref = null;
+    else if (py < minTop) ref = cards[0];
+    else return;
+    var lk = sentLocked();
+    if (ref && ref.classList.contains("hintfill")) ref = cards[lk] || null;   // 고정된 카드 앞으로는 못 간다
+    if (ref === drg.el || drg.el.nextSibling === ref) return;
+    area.insertBefore(drg.el, ref);
+  }
+  function dragPos(px, py) { drg.fl.style.left = (px - drg.dx) + "px"; drg.fl.style.top = (py - drg.dy - 26) + "px"; }
+  function dragBegin(e) {
+    var w = drg.el, r = w.getBoundingClientRect(), fl = w.cloneNode(true);
+    try { if (w.hasPointerCapture && w.hasPointerCapture(drg.id)) w.releasePointerCapture(drg.id); } catch (x) {}
+    fl.className = "wd lift"; fl.style.width = r.width + "px"; fl.style.height = r.height + "px";
+    $("game").appendChild(fl);
+    drg.fl = fl; drg.dx = e.clientX - r.left; drg.dy = e.clientY - r.top; drg.on = true;
+    w.className = "wd gap";
+    dragPos(e.clientX, e.clientY);
+  }
+  document.addEventListener("pointerdown", function (e) {
+    if (e.button > 0 || !cur || !spell || cur.mode !== "sentence" || cur.picked !== null || drg) return;
+    var w = e.target.closest ? e.target.closest("#g-sent .wd") : null;
+    if (!w) return;
+    if (w.classList.contains("hintfill")) { wordSay(w.textContent); return; }   // 힌트로 고정된 카드는 못 끌지만 소리는 난다
+    drg = { el: w, id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false, fl: null, dx: 0, dy: 0 };
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!drg || e.pointerId !== drg.id) return;
+    if (!drg.on) {
+      if (Math.abs(e.clientX - drg.x0) + Math.abs(e.clientY - drg.y0) < 7) return;   // 살짝 눌러 떨리는 것은 끌기로 보지 않는다
+      dragBegin(e);
+    }
+    e.preventDefault();
+    dragPos(e.clientX, e.clientY);
+    dragMove(e.clientX, e.clientY);
+  }, { passive: false });
+  function dragUp(e) {
+    if (!drg || e.pointerId !== drg.id) return;
+    var w = drg.el;
+    dragEnd();
+    if (e.type !== "pointercancel") wordSay(w.textContent);   // 놓거나 살짝 누르면 그 단어 소리
+  }
+  document.addEventListener("pointerup", dragUp);
+  document.addEventListener("pointercancel", dragUp);
+  // 카드가 줄바꿈으로 바뀌어도 칸 높이가 출렁이지 않게: 가장 나쁜 줄 수만큼 높이를 미리 잡는다
+  function fixSentHeight() {
+    var area = $("g-sent"); if (!area) return;
+    area.style.minHeight = "";
+    var cs = getComputedStyle(area), ch = area.children, n = ch.length, i, tot = 0, h = ch[0].offsetHeight;
+    var gx = parseFloat(cs.columnGap) || 8, gy = parseFloat(cs.rowGap) || 8;
+    var inner = area.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    for (i = 0; i < n; i++) tot += ch[i].offsetWidth + gx;
+    var rows = Math.min(n, Math.ceil(tot / inner) + 1);
+    area.style.minHeight = (rows * h + (rows - 1) * gy + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 6) + "px";
+  }
+  function sentSubmit() {
+    if (!cur || !spell || cur.mode !== "sentence" || cur.picked !== null) return;
+    dragEnd();
+    sentSyncSeq();
+    spellFinish();
+  }
+  // 문장 배열 힌트: 앞에서부터 맞게 놓인 카드 다음 자리에 정답 카드를 옮기고 그 앞쪽을 모두 고정한다(이미 전부 맞으면 힌트를 쓰지 않는다)
+  function sentHint(q) {
+    dragEnd(); sentSyncSeq();
+    var arr = items(q), seq = spell.seq, p = 0, k;
+    while (p < seq.length && arr[seq[p].t] === q.tokens[p]) p++;
+    if (p >= seq.length) return;
+    if (!Game.hintSpell(cur)) return;
+    var j = p;
+    for (k = p; k < seq.length; k++) if (arr[seq[k].t] === q.tokens[p]) { j = k; break; }
+    var mv = seq.splice(j, 1)[0]; seq.splice(p, 0, mv);
+    for (k = 0; k <= p; k++) seq[k].lock = true;
+    renderHint(); $("g-hint").disabled = true;
+    renderSpell();
   }
 
   function spellFinish() {
@@ -664,6 +782,7 @@
     if (!cur || cur.picked != null) return;
     if (spell) {
       var q = Game.current(cur);
+      if (cur.mode === "sentence") { sentHint(q); return; }
       if (!Game.hintSpell(cur)) return;
       // 맞게 입력된 앞부분만 남기고, 다음 정답 글자(단어)를 힌트로 채운다
       var arr = items(q), seq = spell.seq, keep = 0;
@@ -1239,7 +1358,7 @@
     if (op && !op.disabled && op.parentNode.id === "g-opts") { if (jig) jigPick(+op.dataset.i); else onPick(+op.dataset.i); return; }
     if (t.closest("#g-spk")) { speakCurrent(true); return; }
     if (t.closest("#g-hint")) { onHint(); return; }
-    if (t.closest("#g-erase")) { spellErase(); return; }
+    if (t.closest("#g-erase")) { if (cur && cur.mode === "sentence") sentSubmit(); else spellErase(); return; }
     if (t.closest("#g-next")) { if (jig) jigNext(); else next(); return; }
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
@@ -1253,7 +1372,7 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && $("exit-modal").style.display === "grid") { closeExit(); return; }
     if (cur && spell && cur.picked === null && $("exit-modal").style.display !== "grid" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      if (e.key === "Backspace") { spellErase(); e.preventDefault(); return; }
+      if (e.key === "Backspace" && cur.mode === "spell") { spellErase(); e.preventDefault(); return; }
       if (cur.mode === "spell" && /^[a-zA-Z]$/.test(e.key)) {
         var qq = Game.current(cur), lo = e.key.toLowerCase(), usedT = {};
         for (var z = 0; z < spell.seq.length; z++) usedT[spell.seq[z].t] = true;

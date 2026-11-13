@@ -205,11 +205,19 @@ var Game = (function () {
     return { id: "dg" + n, en: item[0], ko: item[1], reply: item[2], options: p.options, answer: p.answer, kind: "dialog", rate: cfg.rate, mul: 2 };
   }
 
-  // 문장 배열: 공백으로 단어를 나눠 섞는다(섞은 결과가 원문 순서와 같지 않게)
+  // 문장 배열(v0.65): 첫 단어의 대문자는 힌트가 되므로 I·I'm 류와 고유명사만 남기고 소문자로 바꾼다(정답도 같은 형태, 안내 문구의 원문 en은 그대로)
+  var KEEP_CAP = ["I", "Korea", "Seoul", "English", "Tom", "Rome", "God", "Asia", "Arctic", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  function lowerFirst(tok) {
+    var base = tok.replace(/[?!,.]+$/, "");
+    if (base === "I" || base.indexOf("I'") === 0 || KEEP_CAP.indexOf(base) >= 0) return tok;
+    return tok.charAt(0).toLowerCase() + tok.slice(1);
+  }
+  // 공백으로 단어를 나눠 섞는다(섞은 결과가 원문 순서와 같지 않게)
   function sentenceQuestion(s, rng) {
     var tokens = s.en.split(" "), mixed = tokens, t = 0;
+    tokens[0] = lowerFirst(tokens[0]);
     do { mixed = shuffle(tokens, rng); t++; } while (mixed.join(" ") === tokens.join(" ") && t < 30);
-    return { id: s.id, en: s.en, ko: s.ko, tokens: tokens, pool: mixed, answer: s.en };
+    return { id: s.id, en: s.en, ko: s.ko, tokens: tokens, pool: mixed, answer: tokens.join(" ") };
   }
 
   // 새 판 시작. 단어가 10개 미만이면 null(그 레벨은 아직 준비 중)
