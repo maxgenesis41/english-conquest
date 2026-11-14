@@ -672,18 +672,6 @@ button.sw { padding: 0; cursor: pointer; }
 }
 
 /* ===== v0.62 레벨업 테스트 / 영단어 직소 ===== */
-#modes .mode.lt { background: #FFF6D6; }
-#modes .mode.lt .no { background: #FFC83A; font-size: 19px; }
-#modes .mode.lt.lock { background: #E4EBF5; border-color: #8C9AB8; box-shadow: 0 4px 0 #8C9AB8; }
-#modes .mode.lt.lock .no { background: #C9D3E6; border-color: #8C9AB8; box-shadow: none; }
-#modes .mode.lt.lock .name { color: #7C8AA8; }
-#modes .mode.lt.lock .desc { color: #8C9AB8; }
-#modes .mode.lt .tag { margin-left: auto; font-size: 12px; font-weight: 700; border: 2px solid var(--ink); border-radius: 999px; padding: 2px 9px; background: #FFC83A; flex: none; }
-#modes .mode.lt.lock .tag { background: #fff; border-color: #8C9AB8; color: #7C8AA8; }
-#modes .mode.lt.done .tag { background: #D9F3D9; }
-.lt-pop h3 { margin: 0 0 6px; font-size: 20px; }
-.lt-pop p { margin: 0 0 8px; font-size: 14px; line-height: 1.45; }
-.lt-pop p.fine { font-size: 12px; color: #6a769b; }
 #game .cws { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 #game .cl { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; border: 2px solid transparent; border-radius: 10px; padding: 2px 8px; text-align: left; opacity: .55; }
 #game .cl b { flex: none; font-size: 12px; background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; }
@@ -732,3 +720,24 @@ button.sw { padding: 0; cursor: pointer; }
   #game .sent.ltr.xs .wd.ltr { width: 32px; height: 40px; font-size: 18px; }
 }
 @media (max-width: 340px) { .wd.ltr { width: 40px; height: 48px; font-size: 24px; } .sent.ltr.sm .wd.ltr { width: 36px; height: 44px; font-size: 22px; } .sent.ltr.xs .wd.ltr { width: 30px; height: 40px; font-size: 18px; } }
+
+/* v0.70 모드 선택 2열 화면(시안 2): 아이콘+이름, 칸 막대+최고 성적. 행 수는 JS가 정한다 */
+#modes .mgrid { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 9px 10px; padding-bottom: 5px; }
+#modes .mode.m2 { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 5px; padding: 0 9px; min-height: 0; max-height: none; height: auto; margin: 0; box-shadow: 0 4px 0 var(--ink); min-width: 0; }
+#modes .m2 .r1 { display: flex; align-items: center; gap: 7px; min-width: 0; }
+#modes .m2 .no.ic2 { width: 32px; height: 32px; border-width: 2.5px; }
+#modes .m2 .no.ic2 svg { width: 21px; height: 21px; display: block; }
+#modes .m2 .name { font-size: 14px; line-height: 1.12; font-weight: 700; min-width: 0; word-break: keep-all; }
+#modes .m2 .r2 { display: flex; align-items: center; gap: 6px; }
+#modes .m2 .bar { flex: 1; display: flex; gap: 2px; height: 12px; min-width: 0; }
+#modes .m2 .bar i { flex: 1; border: 2px solid var(--ink); border-radius: 4px; background: #EEF3FA; }
+#modes .m2 .bar i.f { background: var(--green); }
+#modes .m2 .bar.full i.f { background: var(--yellow); }
+#modes .m2 .bar.soonbar i { flex: 1; background: #E4EBF5; border-color: #8C9AB8; }
+#modes .m2 .bar.cont { position: relative; display: block; height: 16px; border: 2px solid var(--ink); border-radius: 6px; background: #EEF3FA; overflow: hidden; }
+#modes .m2 .bar.cont b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--green); }
+#modes .m2 .bar.cont.full b { background: var(--yellow); }
+#modes .m2 .bar.cont em { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 10px; font-weight: 700; color: var(--ink); }
+#modes .m2 .mg { margin-left: 0; width: 26px; height: 26px; font-size: 13px; border-width: 2.5px; }
+#modes .m2 .chip { font-size: 11px; font-weight: 700; color: #7C8AA8; background: #fff; border: 2px solid #8C9AB8; border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+#modes .m2.soon .name { color: #7C8AA8; }
