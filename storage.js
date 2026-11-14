@@ -159,6 +159,10 @@ var EJ = (function () {
   // 레벨 lv의 필요 라운드 R(lv) = 올림(√lv): Lv1=1, Lv2~4=2, Lv5~9=3, ... Lv82~99=10
   function need(lv) { return Math.ceil(Math.sqrt(lv)); }
 
+  // v0.69: 다음 레벨 열림 = R칸을 가득 채운 모드가 K개 이상 + 틀린 단어 0개. K = min(OPEN_K, 사용 가능한 모드 수)(듣기를 못 하는 기기는 가능한 모드 수가 줄어 자동 조정). 모드 목록이 바뀌어도(추가·제외) 코드를 고치지 않는다
+  var OPEN_K = 5;
+  function openK(required) { return Math.min(OPEN_K, reqList(required).length); }
+
   // 그 레벨·모드의 채운 칸 수(최대 R). c가 없으면 옛 기록(g가 A 이상)을 1칸으로 본다
   function slotOf(st, lv, modeId) {
     if (!st) return 0;
@@ -170,11 +174,11 @@ var EJ = (function () {
     return slotOf(get("progress").lvs[String(lv)], lv, modeId);
   }
 
-  // 그 레벨 경험치: {cur: 채운 칸, total: 전체 칸, per: 모드당 칸}
+  // 그 레벨 경험치: {cur: 채운 칸, total: 전체 칸, per: 모드당 칸, filled: R칸을 가득 채운 모드 수, k: 열림에 필요한 모드 수(v0.69)}
   function xp(lv, required) {
     var st = get("progress").lvs[String(lv)], req = reqList(required), cur = 0;
     for (var i = 0; i < req.length; i++) cur += slotOf(st, lv, req[i]);
-    return { cur: cur, total: req.length * need(lv), per: need(lv) };
+    return { cur: cur, total: req.length * need(lv), per: need(lv), filled: filledModes(st, req, lv), k: openK(req) };
   }
 
   // (v0.37 호환) 그 레벨에서 A 이상을 달성한 필수 모드 수
@@ -208,7 +212,7 @@ var EJ = (function () {
     if (typeof score === "number" && (typeof p.modes[key] !== "number" || score > p.modes[key])) p.modes[key] = score;
     if (typeof combo === "number" && combo >= 0 && combo % 1 === 0 && (typeof p.modes[key + ":c"] !== "number" || combo > p.modes[key + ":c"])) p.modes[key + ":c"] = combo;   // v0.49 최고 연속
     var next = p.lvs[String(lv + 1)];
-    if (next && allCleared(st, required, lv) && reviewLeft(lv) === 0 && ltPassed(st)) next.unlocked = true;   // v0.63: 레벨업 테스트 통과도 필요
+    if (next && allCleared(st, required, lv) && reviewLeft(lv) === 0) next.unlocked = true;   // v0.69: 레벨업 테스트 통과는 더 이상 필요 없다
     return set("progress", p);
   }
 
@@ -239,11 +243,15 @@ var EJ = (function () {
     return out;
   }
 
-  // 필수 모드가 모두 R칸이면 true(lv는 st가 속한 레벨)
+  // R칸을 가득 채운 모드 수(lv는 st가 속한 레벨)
+  function filledModes(st, required, lv) {
+    var req = reqList(required), n = 0;
+    for (var i = 0; i < req.length; i++) if (slotOf(st, lv, req[i]) >= need(lv)) n++;
+    return n;
+  }
+  // v0.69: 채운 모드가 K개 이상이면 true
   function allCleared(st, required, lv) {
-    var req = reqList(required);
-    for (var i = 0; i < req.length; i++) if (slotOf(st, lv, req[i]) < need(lv)) return false;
-    return true;
+    return filledModes(st, required, lv) >= openK(required);
   }
 
   // 그 레벨에 남은 틀린 단어 수
@@ -257,7 +265,7 @@ var EJ = (function () {
   function tryUnlock(lv, required) {
     var p = get("progress");
     var st = p.lvs[String(lv)], next = p.lvs[String(lv + 1)];
-    if (!st || !next || next.unlocked || !allCleared(st, required, lv) || reviewLeft(lv) > 0 || !ltPassed(st)) return false;
+    if (!st || !next || next.unlocked || !allCleared(st, required, lv) || reviewLeft(lv) > 0) return false;
     next.unlocked = true;
     return set("progress", p);
   }

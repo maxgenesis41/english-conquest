@@ -51,9 +51,8 @@
   // 잠긴 레벨 카드를 눌렀을 때 안내(현재 레벨 기준: 거기서부터 차례대로 열린다)
   function lockMsg() {
     var f = frontierLv(), req = requiredModes(), x = EJ.xp(f, req), left = EJ.reviewLeft(f);
-    if (x.cur === x.total && left > 0) showToast("틀린 단어 복습 " + left + "개를 마쳐야 해요", lvName(f) + " 경험치는 가득 찼어요");
-    else if (x.cur === x.total) showToast(lvName(f) + " 레벨업 테스트를 통과해야 해요", "모드 목록의 레벨업 테스트에서 퍼즐 " + EJ.passNeed(f) + "개를 완성하세요");
-    else showToast(lvName(f) + " 경험치를 모두 채워야 해요", "경험치 " + x.cur + "/" + x.total + " (모드마다 A 이상 " + x.per + "회)");
+    if (x.filled >= x.k && left > 0) showToast("틀린 단어 복습 " + left + "개를 마쳐야 해요", lvName(f) + " 칸을 채운 모드는 충분해요");
+    else showToast("칸을 채운 모드가 " + x.k + "개 필요해요 (지금 " + x.filled + "개)", lvName(f) + " · 모드마다 A 이상 " + x.per + "회로 칸이 가득 차요");
   }
 
   // 홈(v0.53, 고정 크기·스크롤 없음): 등급 하나의 레벨 10개를 2열×5행으로 보여 주고 ◀ ▶로 등급을 넘긴다(다음 등급 1개까지, 그 뒤는 숨김). 처음 열면 현재 레벨이 있는 등급이다. 선택한 등급은 저장하지 않는다
@@ -71,7 +70,7 @@
         var x = EJ.xp(n, req);
         return '<button class="chunk stage' + (n === f ? " now" : "") + '" data-go="modes" data-n="' + n + '" data-stage="' + lvName(n) + '" style="--c:' + lvColor(n) + '">' +
           '<span class="tile pop">' + n + '</span>' +
-          '<span class="txt"><div class="meta">경험치</div><div class="xp">' + x.cur + "/" + x.total + '</div></span>' +
+          '<span class="txt"><div class="meta">모드</div><div class="xp">' + x.filled + "/" + x.k + '</div></span>' +
           '<span class="grade' + (st.best ? "" : " none") + '">' + (st.best ? st.best : "-") + '</span>' + (n === f ? '<span class="nowchip">지금</span>' : "") + '</button>';
       }
       return '<button class="chunk stage locked" data-lock="' + n + '" aria-disabled="true" aria-label="' + lvName(n) + ' 잠김">' +
@@ -367,7 +366,16 @@
   }
 
   var spell = null;     // 철자 쓰기 진행: {seq:[{t:타일번호, lock:힌트로 채움}]}
-  var MODE_NAMES = { letter: "글자 맞추기", meaning: "뜻 맞추기", spell: "철자 쓰기", sentence: "문장 배열", listen: "듣기" };
+  // v0.69: 모드 목록은 여기 한 곳에서 관리한다(순서·이름). on:false로 두면 열림 계산·다음 판 고르기에서 빠진다(테스트 뒤 제외할 때는 먼저 on:false로 끄고, 확정되면 코드를 지운다). 새 모드는 storage.js의 MODES에도 같은 id를 추가해야 기록된다
+  var MODE_DEFS = [
+    { id: "letter", name: "글자 맞추기", on: true },
+    { id: "meaning", name: "뜻 맞추기", on: true },
+    { id: "spell", name: "철자 쓰기", on: true },
+    { id: "sentence", name: "문장 배열", on: true },
+    { id: "listen", name: "듣기", on: true }
+  ];
+  var MODE_NAMES = {}, MODE_ORDER = [];
+  (function () { for (var i = 0; i < MODE_DEFS.length; i++) if (MODE_DEFS[i].on) { MODE_NAMES[MODE_DEFS[i].id] = MODE_DEFS[i].name; MODE_ORDER.push(MODE_DEFS[i].id); } })();
   function items(q) { return q.letters || q.pool; }   // 순서 모드의 섞인 조각(글자 또는 단어)
   function dragMode() { return !!cur && (cur.mode === "sentence" || cur.mode === "spell"); }   // 끌어서 순서 맞추는 모드(v0.65 문장 배열, v0.66 철자 쓰기)
   function wcls(extra) { return "wd" + (cur && cur.mode === "spell" ? " ltr" : "") + (extra ? " " + extra : ""); }   // 조각 카드 클래스(철자 쓰기는 글자 모양 ltr)
@@ -795,7 +803,7 @@
     // 경험치를 모두 채웠어도 복습이 남아 다음 레벨이 잠겨 있는 경우
     var req = requiredModes(), xpNow = EJ.xp(lastStage, req), slotAfter = EJ.modeSlots(lastStage, lastMode);
     var pendLeft = EJ.reviewLeft(lastStage), pendNext = lastStage < LV_COUNT;
-    var pending = !!(pendNext && after && !after.unlocked && xpNow.cur === xpNow.total && pendLeft > 0);
+    var pending = !!(pendNext && after && !after.unlocked && xpNow.filled >= xpNow.k && pendLeft > 0);
     var set = EJ.get("settings");
     var perfect = r.score === 1350 && r.correct === 10 && r.answered === 10;   // v0.49: 10개 정답·힌트 없음(연속 보너스 포함 만점 1350점)
     cur = null;
@@ -821,8 +829,7 @@
       var ban = $("r-banner"); ban.textContent = "";
       if (r.over) ban.appendChild(el("div", "banner over", "체력이 모두 떨어졌어요"));
       if (unlockMsg) { ban.appendChild(unlockBanner(lastStage + 1)); ufxStart(); }   // v0.57: 레벨 열림 축하 연출
-      else if (pendNext && after && !after.unlocked && ltState(lastStage) === "go") ban.appendChild(el("div", "banner up", "레벨업 테스트에 도전하세요!"));   // v0.63: 경험치·복습을 채우면 테스트 통과가 남는다
-      else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "경험치 +1! (" + xpNow.cur + "/" + xpNow.total + ")" : "이 모드 칸은 가득 찼어요 (" + xpNow.cur + "/" + xpNow.total + ")"));
+      else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "칸 +1! (이 모드 " + slotAfter + "/" + xpNow.per + ")" : "이 모드 칸은 가득 찼어요 (칸을 채운 모드 " + xpNow.filled + "/" + xpNow.k + "개)"));
       var nm = pickNext(set.next);
       var nb = $("r-next"), ag = $("r-again");
       var twoBtn = !(set.next === "order" && nm && nm !== lastMode);
@@ -851,7 +858,6 @@
   }
 
   // 모드 순서대로 다음 판 고르기(할 수 없는 모드는 건너뜀). same이면 방금 모드
-  var MODE_ORDER = ["letter", "meaning", "spell", "sentence", "listen"];
   function canPlay(m) {
     if (m === "listen" && !Sound.ok()) return false;
     return m === "sentence" || wordsOfStage(lastStage, m).length >= 10;
@@ -980,10 +986,8 @@
   // v0.63: 다음 레벨 열림 조건. 레벨의 필수 조건(경험치 칸 가득 + 복습 0)을 채우면 도전을 제안하고, 퍼즐 5개 중 EJ.passNeed(레벨)개 이상 완성하면 통과해 다음 레벨이 열린다(실패해도 재도전 무제한). 게임 화면(#game)을 그대로 쓰고, 진행 상태는 jig에만 둔다(cur는 null).
   var jig = null, ltAsked = {}, ltAfter = null, jigT = null;
   function ltState(lv) {   // "pass" 통과함(다시 해 볼 수 있음) / "go" 도전 가능 / "lock" 조건 미달
-    var t = EJ.levelTest(lv);
-    if (t && t.p === true) return "pass";
-    var x = EJ.xp(lv, requiredModes());
-    return (x.cur === x.total && EJ.reviewLeft(lv) === 0) ? "go" : "lock";
+    var t = EJ.levelTest(lv);   // v0.69: 열림 조건에서 빠져 항상 도전할 수 있는 연습 게임이다(v0.70에서 일반 모드로 편입 예정)
+    return (t && t.p === true) ? "pass" : "go";
   }
   function jigLeave() {   // 직소 화면 정리(다른 게임을 시작하거나 나갈 때)
     if (jigT) { clearTimeout(jigT); jigT = null; }
@@ -991,6 +995,7 @@
     $("game").classList.remove("jig");
   }
   function ltOffer(after) {   // 도전 제안 팝업. 띄웠으면 true(레벨당 이 접속에서 한 번만 제안한다. 모드 목록의 줄은 계속 남는다)
+    return false;   // v0.69: 열림 조건에서 빠져 도전 제안 팝업은 띄우지 않는다(v0.70에서 삭제)
     var lv = lastStage, nx = EJ.get("progress").lvs[String(lv + 1)];
     if (ltAsked[lv] || ltState(lv) !== "go" || !nx || nx.unlocked) return false;   // 다음 레벨이 이미 열려 있으면 제안하지 않는다(모드 목록 줄은 남는다)
     ltAsked[lv] = true; ltAfter = after;
@@ -1198,7 +1203,7 @@
     if (empty) note.appendChild(el("div", "say bad", lvName(n) + " 단어는 아직 준비 중이에요"));
     var req = requiredModes(), nx = EJ.get("progress").lvs[String(n + 1)];
     var xn = EJ.xp(n, req);
-    $("modes-prog").textContent = "경험치 " + xn.cur + "/" + xn.total + " · 모드마다 A 이상 " + xn.per + "회" + ((nx && !nx.unlocked) ? " · 채우고 레벨업 테스트를 통과하면 다음 레벨이 열려요" : "");
+    $("modes-prog").textContent = "열림 조건: 칸을 채운 모드 " + xn.filled + "/" + xn.k + "개 · 틀린 단어 0개";
     var lvst = EJ.get("progress").lvs[String(n)];
     for (var mi = 0; mi < MODE_ORDER.length; mi++) {
       var mg = document.querySelector('[data-mg="' + MODE_ORDER[mi] + '"]'), g = (lvst.g && lvst.g[MODE_ORDER[mi]]) || "";
@@ -1207,8 +1212,8 @@
     }
     var lts = ltState(n), ltr = EJ.levelTest(n), lrow = $("lt-row"), nlk = !!(nx && !nx.unlocked);   // v0.63 레벨업 테스트 줄(읽기만)
     lrow.className = "chunk mode lt" + (lts === "lock" ? " lock" : lts === "pass" ? " done" : "");
-    $("lt-desc").textContent = lts === "lock" ? "필수 조건을 채우면 열려요" : lts === "pass" ? "영단어 직소 · 최고 " + ltr.f + "/" + Jig.COUNT + "개 완성" : "영단어 직소 · " + (nlk ? EJ.passNeed(n) + "개 완성하면 다음 레벨이 열려요" : "도전해 보세요");
-    $("lt-tag").textContent = lts === "lock" ? "잠김" : lts === "pass" ? "통과" : "도전!";
+    $("lt-desc").textContent = lts === "pass" ? "영단어 직소 · 최고 " + ltr.f + "/" + Jig.COUNT + "개 완성" : "영단어 직소 · 연습으로 도전해 보세요";
+    $("lt-tag").textContent = lts === "pass" ? "통과" : "도전!";
     lrow.disabled = empty;
     var btns = document.querySelectorAll("[data-start]");
     for (var i = 0; i < btns.length; i++) btns[i].disabled = empty;
