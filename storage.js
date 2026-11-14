@@ -49,10 +49,6 @@ var EJ = (function () {
           if (!isObj(s.g)) return false;
           for (var gk in s.g) if (MODES.indexOf(gk) < 0 || GRADES.indexOf(s.g[gk]) < 0) return false;
         }
-        if (s.lt !== undefined) {   // v0.62 레벨업 테스트 기록 {g: 등급, s: 맞힌 수, n: 전체 수}. 형식 번호는 그대로(없는 옛 기록도 정상)
-          if (!isObj(s.lt) || GRADES.indexOf(s.lt.g) < 0 || typeof s.lt.s !== "number" || typeof s.lt.n !== "number") return false;
-          if ((s.lt.f !== undefined && typeof s.lt.f !== "number") || (s.lt.p !== undefined && typeof s.lt.p !== "boolean")) return false;
-        }
         if (s.c !== undefined) {
           if (!isObj(s.c)) return false;
           for (var ck in s.c) if (MODES.indexOf(ck) < 0 || typeof s.c[ck] !== "number" || s.c[ck] < 0 || s.c[ck] % 1 !== 0) return false;
@@ -216,33 +212,6 @@ var EJ = (function () {
     return set("progress", p);
   }
 
-  // v0.63 레벨업 테스트(영단어 직소) = 다음 레벨 열림 조건. 기록은 lvs[레벨].lt = {g: 최고 등급, s: 최고 정답 수, n: 전체, f: 최고 완성 퍼즐 수, p: 통과 여부}.
-  // 통과 = 퍼즐 5개 중 passNeed(레벨)개 이상 완성(레벨 1~19:1, 20~39:2, 40~59:3, 60~79:4, 80~99:5). 실패해도 몇 번이든 재도전. 형식 번호는 그대로(lt가 없거나 p가 없는 옛 기록은 미통과)
-  var PUZZLES = 5;
-  function passNeed(lv) { return Math.min(PUZZLES, Math.floor(lv / 20) + 1); }
-  function levelTest(lv) {
-    var st = get("progress").lvs[String(lv)];
-    return st && st.lt ? st.lt : null;
-  }
-  function ltPassed(st) { return !!(st && st.lt && st.lt.p === true); }
-  // 한 번 치른 결과 기록: 최고 기록만 올리고, 통과하면 p=true. 필수 조건(경험치·복습)이 갖춰져 있으면 다음 레벨을 연다.
-  // 반환: {saved, passed(이번 판 통과), opened(이번에 새로 열림)}
-  function recordLevelTest(lv, grade, correct, total, full, required) {
-    var out = { saved: false, passed: false, opened: false };
-    if (GRADES.indexOf(grade) < 0 || lv < 1 || lv > LV_COUNT || typeof correct !== "number" || typeof total !== "number" || typeof full !== "number") return out;
-    var p = get("progress"), st = p.lvs[String(lv)];
-    if (!st) return out;
-    out.passed = full >= passNeed(lv);
-    var old = st.lt || { g: grade, s: 0, n: total, f: 0, p: false };
-    var nt = { g: GRADES.indexOf(grade) > GRADES.indexOf(old.g) ? grade : old.g, s: Math.max(old.s, correct), n: total, f: Math.max(old.f || 0, full), p: old.p === true || out.passed };
-    st.lt = nt;
-    var next = p.lvs[String(lv + 1)];
-    if (next && !next.unlocked && nt.p && allCleared(st, required, lv) && reviewLeft(lv) === 0) { next.unlocked = true; out.opened = true; }
-    out.saved = set("progress", p);
-    if (!out.saved) out.opened = false;
-    return out;
-  }
-
   // R칸을 가득 채운 모드 수(lv는 st가 속한 레벨)
   function filledModes(st, required, lv) {
     var req = reqList(required), n = 0;
@@ -336,7 +305,7 @@ var EJ = (function () {
 
   return {
     KEYS: KEYS, MODES: MODES, NEED: NEED, LV_COUNT: LV_COUNT, GRADES: GRADES, STYLES: STYLES, NEXTS: NEXTS,
-    get: get, set: set, best: best, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, need: need, xp: xp, modeSlots: modeSlots, tryUnlock: tryUnlock, levelTest: levelTest, recordLevelTest: recordLevelTest, passNeed: passNeed, setSound: setSound, setSetting: setSetting,
+    get: get, set: set, best: best, recordResult: recordResult, addWord: addWord, addWrongs: addWrongs, removeWrongs: removeWrongs, reviewLeft: reviewLeft, modesCleared: modesCleared, need: need, xp: xp, modeSlots: modeSlots, tryUnlock: tryUnlock, setSound: setSound, setSetting: setSetting,
     clearAll: clearAll, gradeAtLeast: gradeAtLeast, mode: mode,
     writes: function () { return writes; },
     status: function (name) { return statuses[name] || "-"; }

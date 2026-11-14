@@ -671,7 +671,7 @@ button.sw { padding: 0; cursor: pointer; }
   #g-card .reveal.dl span { font-size: 12px; }
 }
 
-/* ===== v0.62 레벨업 테스트 / 영단어 직소 ===== */
+/* ===== 영단어 직소 ===== */
 #game .cws { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 #game .cl { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; border: 2px solid transparent; border-radius: 10px; padding: 2px 8px; text-align: left; opacity: .55; }
 #game .cl b { flex: none; font-size: 12px; background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; }
