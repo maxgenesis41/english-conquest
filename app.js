@@ -87,6 +87,7 @@
       '<button class="arr nx" data-bandmove="1" aria-label="다음 등급"' + (viewBand >= maxView ? " disabled" : "") + '><svg class="ic"><use href="#i-back"/></svg></button>';
     var bb = document.getElementById("beta-badge");   // BETA-TEST
     if (bb) { bb.style.display = betaFrom ? "" : "none"; bb.innerHTML = betaFrom ? "🧪 베타<br>레벨 " + betaFrom + "~" : ""; bb.setAttribute("aria-label", betaFrom ? "베타: " + bandOf(betaFrom).name + "(레벨 " + betaFrom + "~) 열림" : ""); }
+    if (window.Chr) Chr.setBand(b.id);   // v0.76: 대기 캐릭터는 보고 있는 등급의 모습
     var rvN = EJ.get("review").items.length;
     document.getElementById("rv-count").textContent = String(rvN);
     document.getElementById("rv-guide").style.display = rvN > 0 ? "" : "none";
@@ -310,7 +311,10 @@
     if (!tm || !tm.started || tm.done || tm.paused) return;
     var left = Math.max(0, tm.end - Date.now()), now = Date.now();
     var span = Math.max(3000, tm.ms * 0.25), zone = left <= span ? 2 : left <= tm.ms * 0.5 ? 1 : 0;
-    if (zone !== tm.zone) { tm.zone = zone; tm.nextTick = 0; }
+    if (zone !== tm.zone) {
+      tm.zone = zone; tm.nextTick = 0;
+      if (zone === 2 && window.Chr && cur && !cur.review && cur.picked == null) Chr.pop("time", { ms: 1700 });   // v0.74: 제한시간이 빨강 구간(째깍이 빨라질 때)에 들어서면 위기 캐릭터
+    }
     if (!zone || now < tm.nextTick) return;
     var gap = zone === 1 ? 1000 : 1000 / (3 + 2 * (1 - left / span));
     sfx(zone === 1 ? "tick" : "tickfast");
@@ -420,6 +424,8 @@
   }
 
   function renderQuestion() {
+    if (window.Chr) Chr.hide();
+    var hp1Pop = window.Chr && cur && !cur.review && cur.hp === 1 && cur.index > chrDangerQ + 1;   // v0.74
     var q = Game.current(cur);
     fxPulse(false);
     renderHp();
@@ -502,6 +508,7 @@
     var first = box.querySelector(".opt");
     if (first) first.focus();
     if (cur.mode === "listen") { if (isLong(q)) box.classList.add("sl"); drawReplays(); fitListen(); setTimeout(speakCurrent, 250); }   // 문제가 나오면 한 번 자동 재생(기기가 막으면 버튼으로)
+    if (hp1Pop) Chr.pop("hp1", { ms: 1500 });   // v0.74: 체력 1칸이면 문제가 시작될 때 잠깐 긴장한 모습
   }
 
   // 문장 배열·철자 쓰기: 칸의 카드(글자)를 현재 순서(spell.seq)에 맞게 다시 그린다
@@ -654,6 +661,7 @@
     cur = g;
     show("game");
     renderQuestion();
+    if (window.Chr) Chr.pop("smile", { ms: 1400 });   // v0.72: 시작 인사
     return true;
   }
 
@@ -694,6 +702,7 @@
     }
     var sub = $("g-card").querySelector(".sub");
     if (sub) { sub.className = "sub fbmsg " + (r.correct ? "good" : "bad"); sub.textContent = msg; }
+    chrReact(r);
     if (r.correct && !r.over && !r.last) {
       timer = setTimeout(next, 800);
     } else {
@@ -703,6 +712,15 @@
       $("g-foot").classList.add("fb");   // 힌트·지우기 자리를 다음 버튼이 쓴다
       nb.focus();
     }
+  }
+
+  var chrDangerQ = -9;   // v0.74: 체력 1칸 위기 캐릭터를 마지막으로 보여 준 문제 번호(다음 문제 시작 때 같은 말을 또 하지 않게)
+  // v0.72: 정답·오답 상황에 맞는 캐릭터(복습·체력 0 종료 제외). 연속 3회·5의 배수는 환호, 오답 뒤 체력 1칸이면 위기
+  function chrReact(r) {
+    if (!window.Chr || !cur || cur.review) return;
+    if (r.over) { Chr.pop("cry", { ms: 4000 }); return; }   // v0.74: 체력이 다하면 우는 모습
+    if (r.correct) Chr.pop(cur.combo === 3 || (cur.combo >= 5 && cur.combo % 5 === 0) ? "cheer" : "happy", { ms: 1000 });
+    else { if (cur.hp === 1) chrDangerQ = cur.index; Chr.pop(cur.hp === 1 ? "danger" : "sad", { ms: cur.hp === 1 ? 2200 : 1800 }); }
   }
 
   function onPick(i) {
@@ -775,6 +793,7 @@
     sfx("clear");
     $("res-modal").style.display = "grid";
     (left ? nb : $("r-modes")).focus();
+    if (opened && window.Chr) Chr.pop("party", { over: true, ms: 3200 });   // v0.72
   }
 
   // 힌트 버튼: 열쇠 아이콘을 그 레벨의 판당 힌트 수만큼 보여 주고, 남은 것은 컬러·사용한 것은 오른쪽부터 회색(v0.41). 힌트가 없는 레벨(Lv90~99)은 사선 열쇠 1개
@@ -843,6 +862,7 @@
       sfx(r.over ? "over" : perfect ? "perfect" : "clear");
       if (unlockMsg) unlockSound(perfect);
       $("res-modal").style.display = "grid"; $("r-next").focus();
+      if (window.Chr) { if (unlockMsg) Chr.pop("party", { over: true, ms: 3200 }); else if (r.over) Chr.pop("cry", { over: true, ms: 3500 }); }   // v0.72 축하, v0.74 체력 0이면 우는 모습
     } else {
       sfx(perfect ? "perfect" : "clear");
       if (unlockMsg) unlockSound(perfect);
@@ -927,7 +947,7 @@
     clearTimeout(toastT);
     toastT = setTimeout(function () { t.style.display = "none"; }, 2200);
   }
-  function closeRes() { $("res-modal").style.display = "none"; ufxClear(); }
+  function closeRes() { $("res-modal").style.display = "none"; ufxClear(); if (window.Chr) Chr.hide(); }
 
   // v0.57: 레벨 열림 축하 연출(결과 팝업). 빛 번짐·방울·색종이·폭죽은 CSS 애니메이션이라 모션 줄이기면 보이지 않는다(배너만 표시)
   var UFX_COLORS = ["#FF5767", "#FFC83A", "#4CCB4B", "#3D8BFF", "#FF6FAE", "#FF8F3A"], ufxT = null, ufxS = null;
@@ -987,7 +1007,7 @@
     ufxT = setTimeout(function () { if (front.parentNode) front.parentNode.removeChild(front); }, 5000);   // 색종이·폭죽은 한 번만(5초 뒤 정리)
   }
 
-  function openExit() { pauseLimit(); $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
+  function openExit() { if (window.Chr) Chr.hide(); pauseLimit(); $("exit-modal").style.display = "grid"; $("exit-no").focus(); }
   function closeExit() { $("exit-modal").style.display = "none"; resumeLimit(); }
 
   // 설정 탭(v0.52): 화면 표시만 바꾸고 저장하지 않는다
@@ -1019,6 +1039,7 @@
   }
   function jigStep() { var p = jig.d.puzzles[jig.pi]; return { p: p, k: p.steps[jig.si] }; }
   function jigRender() {
+    if (window.Chr) Chr.hide();
     var s = jigStep(), p = s.p, k = s.k, card = $("g-card"), box = $("g-opts"), o = p.o[k];
     $("g-count").textContent = (jig.pi + 1) + " / " + jig.d.puzzles.length;
     $("g-bar").style.width = (jig.pi * 100 / jig.d.puzzles.length) + "%";
@@ -1086,6 +1107,7 @@
     jig.got[s.k] = true;
     jigGrid(true, "ok");   // 공개된 단어는 정답이므로 맞든 틀리든 초록으로 보여 준다
     sfx(ok ? "correct" : "wrong");
+    if (window.Chr) Chr.pop(ok ? "happy" : "sad", { ms: ok ? 1000 : 1800 });   // v0.72: 빈 공간이 모자라면 나오지 않는다
     jig.sub.className = "sub fbmsg " + (ok ? "good" : "bad");
     jig.sub.textContent = ok ? "정답이에요!" : "아쉬워요. 초록색이 정답이에요";
     if (ok) { jigT = setTimeout(jigNext, 800); }
@@ -1136,6 +1158,7 @@
     if (newly) unlockSound(false);
     $("res-modal").style.display = "grid";
     $("r-next").focus();
+    if (newly && window.Chr) Chr.pop("party", { over: true, ms: 3200 });   // v0.72
   }
 
   function show(name) {
@@ -1148,6 +1171,7 @@
     if (name === "modes") renderModes();
     if (name === "settings") { setTab("game"); renderSettings(); }
     bgmSync();   // 게임 화면에서만 재생, 다른 화면으로 가면 정지
+    if (window.Chr) { if (name === "modes" || name === "game") Chr.setBand(bandOf(lastStage).id); Chr.screen(name); }   // v0.72: 홈·모드 선택은 대기 캐릭터, 그 밖의 화면에서는 캐릭터를 숨긴다
     window.scrollTo(0, 0);
   }
 

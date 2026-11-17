@@ -741,3 +741,25 @@ button.sw { padding: 0; cursor: pointer; }
 #modes .m2 .mg { margin-left: 0; width: 26px; height: 26px; font-size: 13px; border-width: 2.5px; }
 #modes .m2 .chip { font-size: 11px; font-weight: 700; color: #7C8AA8; background: #fff; border: 2px solid #8C9AB8; border-radius: 999px; padding: 0 7px; white-space: nowrap; }
 #modes .m2.soon .name { color: #7C8AA8; }
+
+/* v0.72 캐릭터·말풍선: 캐릭터는 오른쪽, 말풍선은 왼쪽. 홈·모드 선택은 화면 아래 고정 영역(dock), 게임 중에는 빈 공간에 잠깐 나오는 팝업(chrpop) */
+.chrdock { flex: none; display: flex; align-items: flex-end; gap: 2px; position: relative; margin-top: auto; }
+#home .chrdock { height: clamp(140px, 27dvh, 210px); }
+#modes .chrdock { height: clamp(116px, 20dvh, 170px); }
+.chrdock .dl { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; }
+.chrbw { flex: 1; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 17px; }
+.chrb { position: relative; max-width: 100%; box-sizing: border-box; min-height: 56px; display: flex; align-items: center; padding: 11px 17px; font-size: 15px; line-height: 1.4; font-weight: 700; color: var(--ink); white-space: pre-line; word-break: keep-all; }
+.chrb > span { position: relative; z-index: 1; }
+.chrb > svg.bg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; filter: drop-shadow(0 3px 0 rgba(36,51,107,.25)); }
+.chrb > svg.bg path { fill: #fff; stroke: #24336B; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.chrimg { height: 100%; width: auto; max-width: 46%; object-fit: contain; object-position: right bottom; flex: none; filter: drop-shadow(0 3px 0 rgba(36,51,107,.2)); pointer-events: none; user-select: none; -webkit-user-select: none; }
+#home .chrdock .btns { flex: none; margin-top: 8px; }
+#home .chrdock .ver { align-self: flex-start; margin: 6px 0 0; }
+.chrpop { position: fixed; left: max(14px, calc(50vw - 226px)); right: max(12px, calc(50vw - 228px)); z-index: 4; display: flex; align-items: flex-end; gap: 2px; pointer-events: none; }
+.chrpop.over { z-index: 8; }
+.chrpop .chrbw { align-items: center; }
+.chrph { flex: none; height: 100%; aspect-ratio: 3 / 4; max-width: 46%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 2px dashed #24336B; border-radius: 16px; background: rgba(255,255,255,.65); color: #24336B; font-size: 13px; font-weight: 800; }
+.chrpop.in { animation: chrin .22s ease-out both; }
+@keyframes chrin { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (max-width: 340px) { .chrb { font-size: 14px; padding: 10px 14px; } }
+@media (prefers-reduced-motion: reduce) { .chrpop.in { animation: none; } }
