@@ -360,11 +360,11 @@
     var ans;
     if (spell) {
       var chips = $("g-sent").children;
-      for (i = 0; i < chips.length; i++) chips[i].className = wcls("bad");
+      for (i = 0; i < chips.length; i++) { if (!chips[i].classList.contains("wd")) continue; chips[i].className = wcls("bad"); }
       $("g-sent").classList.add("done");
       var bx = $("g-opts").children;
       for (i = 0; i < bx.length; i++) { bx[i].disabled = true; bx[i].className = "opt used"; }
-      $("g-erase").disabled = true;
+      $("g-erase").disabled = true; $("g-del").disabled = true; $("g-opts").classList.add("fin");
       ans = cur.mode === "sentence" ? "\"" + q.en + "\"" : q.en;
     } else {
       var opts = $("g-opts").querySelectorAll(".opt");
@@ -455,10 +455,11 @@
     dragEnd();
     var er = $("g-erase");
     er.style.display = isOrder ? "" : "none";
-    er.textContent = "확인";   // 문장 배열(v0.65)·철자 쓰기(v0.66)는 지우기 없이 확인 버튼
+    er.textContent = "확인";   // 문장 배열·철자 쓰기는 확인 버튼으로 제출한다
     er.classList.toggle("ok", isOrder);
+    var dl = $("g-del"); dl.style.display = isOrder ? "" : "none"; dl.disabled = true;
+    $("g-foot").classList.toggle("sent", isOrder);   // 문장 배열·철자 쓰기는 버튼이 4개라 하단 줄을 조금 좁힌다   // v0.83: 문장 배열 지우기 버튼(마지막 단어 1개)
     spell = isOrder ? { seq: [] } : null;
-    if (isOrder) for (var si = 0; si < items(q).length; si++) spell.seq.push({ t: si, lock: false });   // 카드(글자)를 모두 칸에 섞어 둔다
     var card = $("g-card"); card.textContent = "";
     card.dataset.k = (cur.mode === "listen" && isLong(q)) ? "s" : "";
     delete card.dataset.a;   // 답한 뒤 표시(v0.61 대답 고르기에서 낮은 화면 압축에 쓴다)
@@ -476,25 +477,33 @@
       card.appendChild(t);
       layoutCells(t);
     } else if (isSpell) {
-      card.appendChild(el("div", "sub", "뜻에 맞게 글자를 끌어 순서를 바꿔 보세요"));
+      card.appendChild(el("div", "sub", "눌러서 쌓고, 끌어서 옮겨요"));
       var ko2 = el("div", "ko", q.ko); ko2.style.cssText = "font-size:26px;font-weight:700;margin:8px 0 14px";
       card.appendChild(ko2);
       var n = q.letters.length;
       var ssz = n > 12 ? " xs" : n > 8 ? " sm" : "";
       var lt = el("div", "sent drag ltr" + ssz); lt.id = "g-sent";
       card.appendChild(lt);
-      box.className = "wpool none";   // 아래 글자 풀 없음(글자는 칸에서 끌어 옮긴다)
+      box.className = "wpool ltr" + ssz;   // v0.84: 아래 글자 풀(눌러서 쌓거나 칸으로 끌어 넣는다)
+      for (var li = 0; li < n; li++) { var lb = el("button", "opt ltr", q.letters[li]); lb.dataset.i = String(li); box.appendChild(lb); }
+      for (var lj = 0; lj < n; lj++) spell.seq.push({ t: lj, lock: false });   // 칸 높이: 글자를 모두 놓은 상태로 재어 고정한 뒤 비운다
       renderSpell();
       fixSentHeight();
+      spell.seq = [];
+      renderSpell();
     } else if (isSent) {
-      card.appendChild(el("div", "sub", "뜻에 맞게 카드를 끌어 순서를 바꿔 보세요"));
+      card.appendChild(el("div", "sub", "눌러서 쌓고, 끌어서 옮겨요"));
       var ko3 = el("div", "ko", q.ko); ko3.style.cssText = "font-size:23px;font-weight:700;margin:8px 0 12px;word-break:keep-all";
       card.appendChild(ko3);
       var sent = el("div", "sent drag"); sent.id = "g-sent";
       card.appendChild(sent);
-      box.className = "wpool none";   // 아래 카드 풀 없음(카드는 문장 칸에서 끌어 옮긴다)
+      box.className = "wpool";   // v0.83: 아래 단어 풀(눌러서 쌓거나 문장 칸으로 끌어 넣는다)
+      for (var wi = 0; wi < items(q).length; wi++) { var wb = el("button", "opt", items(q)[wi]); wb.dataset.i = String(wi); box.appendChild(wb); }
+      for (var sj = 0; sj < items(q).length; sj++) spell.seq.push({ t: sj, lock: false });   // 칸 높이: 카드를 모두 놓은 상태로 재어 고정한 뒤 비운다
       renderSpell();
       fixSentHeight();
+      spell.seq = [];
+      renderSpell();
     } else if (cur.mode === "listen") {
       if (q.kind === "dialog") {   // 대답 고르기: 질문 글자가 화면에 없어서 헷갈리지 않게 안내 문구를 반짝이는 배지로 크게 보여 준다
         var dq = el("div", "sub dq"); dq.appendChild(el("i", "", "✦")); dq.appendChild(el("span", "", "질문을 듣고 알맞은 대답을 골라 주세요")); dq.appendChild(el("i", "", "✦"));
@@ -525,8 +534,33 @@
   function renderSpell() {
     var q = Game.current(cur), seq = spell.seq, arr = items(q), i;
     var area = $("g-sent"); area.textContent = "";
+    if (!seq.length) area.appendChild(sentPh());
     for (i = 0; i < seq.length; i++) { var wc = el("span", wcls(seq[i].lock ? "hintfill" : ""), arr[seq[i].t]); wc.dataset.t = String(seq[i].t); area.appendChild(wc); }
-    $("g-erase").disabled = cur.picked !== null;
+    {   // v0.83: 풀 단어 사용 표시·지우기·확인 상태(v0.84: 철자 쓰기도 같은 방식)
+      var used = {}, canDel = false, pb = $("g-opts").children;
+      for (i = 0; i < seq.length; i++) { used[seq[i].t] = true; if (!seq[i].lock) canDel = true; }
+      for (i = 0; i < pb.length; i++) { var u = !!used[+pb[i].dataset.i]; pb[i].className = "opt" + (cur.mode === "spell" ? " ltr" : "") + (u ? " used" : ""); pb[i].disabled = u || cur.picked !== null; }
+      $("g-del").disabled = !canDel || cur.picked !== null;
+      $("g-erase").disabled = seq.length !== arr.length || cur.picked !== null;
+    }
+  }
+  function sentPh() { return el("span", "ph", cur && cur.mode === "spell" ? "글자를 눌러 단어를 만드세요" : "단어를 눌러 문장을 만드세요"); }
+  // v0.83 문장 배열(수정 전 방식 복원): 풀 단어를 누르면 문장 칸 맨 뒤에 쌓이고, 지우기는 마지막 단어 1개(힌트 고정 제외)를 풀로 되돌린다
+  function spellAdd(t) {
+    if (!cur || !spell || !dragMode() || cur.picked !== null) return;
+    var q = Game.current(cur);
+    for (var i = 0; i < spell.seq.length; i++) if (spell.seq[i].t === t) return;
+    spell.seq.push({ t: t, lock: false });
+    if (cur.mode === "sentence") wordSay(items(q)[t]);
+    renderSpell();
+  }
+  function spellErase() {
+    if (!cur || !spell || !dragMode() || cur.picked !== null) return;
+    dragEnd(); sentSyncSeq();
+    var s = spell.seq;
+    if (!s.length || s[s.length - 1].lock) return;
+    s.pop();
+    renderSpell();
   }
 
   function spellWord() {
@@ -539,7 +573,7 @@
   var drg = null;   // {el, id, x0, y0, on, fl, dx, dy}
   function sentSyncSeq() {   // 화면 카드 순서를 spell.seq로 옮긴다
     var ch = $("g-sent").children, seq = [];
-    for (var i = 0; i < ch.length; i++) seq.push({ t: +ch[i].dataset.t, lock: ch[i].classList.contains("hintfill") });
+    for (var i = 0; i < ch.length; i++) { if (!ch[i].classList.contains("wd")) continue; seq.push({ t: +ch[i].dataset.t, lock: ch[i].classList.contains("hintfill") }); }
     spell.seq = seq;
   }
   function dragEnd() {   // 드래그 중이면 현재 위치에 놓고 끝낸다(시간 초과·확인·다음 문제 때도 안전하게 정리)
@@ -548,16 +582,30 @@
     if (d.fl && d.fl.parentNode) d.fl.parentNode.removeChild(d.fl);
     if (d.on && d.el) {
       d.el.className = wcls();
-      if (spell && dragMode() && $("g-sent") && d.el.parentNode === $("g-sent")) sentSyncSeq();
+      if (spell && dragMode() && $("g-sent") && cur) { sentSyncSeq(); renderSpell(); }   // v0.83: 칸 밖에 놓으면 풀로 돌아간다(칸에 없으면 순서에서 빠짐)
+      else if (spell && dragMode() && $("g-sent") && d.el.parentNode === $("g-sent")) sentSyncSeq();
     }
   }
+  var noClickUntil = 0;   // 끌기가 끝난 직후에 같은 단어가 또 눌린 것으로 처리되지 않게 막는다
   function sentLocked() { var n = 0, ch = $("g-sent").children; while (n < ch.length && ch[n].classList.contains("hintfill")) n++; return n; }
   function dragMove(px, py) {   // 손가락이 있는 줄에서 가운데가 손가락보다 오른쪽인 첫 카드 앞에 빈틈을 둔다
-    var area = $("g-sent"), ch = area.children, cards = [], i;
-    for (i = 0; i < ch.length; i++) if (ch[i] !== drg.el) cards.push(ch[i]);
-    if (!cards.length) return;
-    var pr = drg.el.getBoundingClientRect();
-    if (px >= pr.left && px <= pr.right && py >= pr.top - 4 && py <= pr.bottom + 4) return;   // 빈틈 위에서는 그대로
+    var area = $("g-sent"), ch = area.children, cards = [], i, sentM = !!cur && dragMode();
+    if (sentM) {   // v0.83: 칸 밖에서는 빈틈을 없애고(놓으면 풀로 돌아감), 칸 안으로 들어오면 다시 만든다
+      var ar = area.getBoundingClientRect();
+      var inside = px >= ar.left - 8 && px <= ar.right + 8 && py >= ar.top - 8 && py <= ar.bottom + 8;
+      if (!inside) {
+        if (drg.el.parentNode === area) { area.removeChild(drg.el); if (!area.querySelector(".wd")) area.appendChild(sentPh()); }
+        return;
+      }
+      var ph = area.querySelector(".ph"); if (ph) area.removeChild(ph);
+    }
+    for (i = 0; i < ch.length; i++) if (ch[i] !== drg.el && ch[i].classList.contains("wd")) cards.push(ch[i]);
+    if (!cards.length) { if (sentM && drg.el.parentNode !== area) area.appendChild(drg.el); return; }
+    var inDom = drg.el.parentNode === area;
+    if (inDom) {
+      var pr = drg.el.getBoundingClientRect();
+      if (px >= pr.left && px <= pr.right && py >= pr.top - 4 && py <= pr.bottom + 4) return;   // 빈틈 위에서는 그대로
+    }
     var row = [], minTop = 1e9, maxBot = -1e9, r;
     for (i = 0; i < cards.length; i++) {
       r = cards[i].getBoundingClientRect();
@@ -572,14 +620,26 @@
       if (!ref) ref = row[row.length - 1].c.nextSibling;
     } else if (py > maxBot) ref = null;
     else if (py < minTop) ref = cards[0];
+    else if (!inDom) ref = null;   // 줄 사이 틈: 풀에서 끌고 온 단어는 맨 뒤에 둔다
     else return;
     var lk = sentLocked();
     if (ref && ref.classList.contains("hintfill")) ref = cards[lk] || null;   // 고정된 카드 앞으로는 못 간다
-    if (ref === drg.el || drg.el.nextSibling === ref) return;
+    if (inDom && (ref === drg.el || drg.el.nextSibling === ref)) return;
     area.insertBefore(drg.el, ref);
   }
   function dragPos(px, py) { drg.fl.style.left = (px - drg.dx) + "px"; drg.fl.style.top = (py - drg.dy - 26) + "px"; }
   function dragBegin(e) {
+    if (drg.pool) {   // v0.83: 아래 풀의 단어를 끌기 시작 — 문장 칸에 넣을 빈틈 카드(칸 안에 들어오면 나타남)와 따라다니는 카드
+      var pbtn = drg.btn, gp = el("span", wcls("gap"), pbtn.textContent);
+      gp.dataset.t = String(drg.t); drg.el = gp;
+      try { if (pbtn.hasPointerCapture && pbtn.hasPointerCapture(drg.id)) pbtn.releasePointerCapture(drg.id); } catch (x) {}
+      var pfl = el("span", wcls("lift"), pbtn.textContent);
+      $("game").appendChild(pfl);
+      drg.fl = pfl; drg.dx = pfl.offsetWidth / 2; drg.dy = pfl.offsetHeight / 2; drg.on = true;
+      pbtn.className = "opt used";
+      dragPos(e.clientX, e.clientY);
+      return;
+    }
     var w = drg.el, r = w.getBoundingClientRect(), fl = w.cloneNode(true);
     try { if (w.hasPointerCapture && w.hasPointerCapture(drg.id)) w.releasePointerCapture(drg.id); } catch (x) {}
     fl.className = wcls("lift"); fl.style.width = r.width + "px"; fl.style.height = r.height + "px";
@@ -591,6 +651,11 @@
   document.addEventListener("pointerdown", function (e) {
     if (e.button > 0 || !cur || !spell || !dragMode() || cur.picked !== null || drg) return;
     var w = e.target.closest ? e.target.closest("#g-sent .wd") : null;
+    if (!w) {   // v0.83: 풀 단어에서 끌기 시작(그냥 누르면 click으로 쌓인다)
+      var pb0 = e.target.closest ? e.target.closest("#g-opts .opt") : null;
+      if (pb0 && !pb0.disabled && !pb0.classList.contains("used")) drg = { pool: true, btn: pb0, t: +pb0.dataset.i, el: null, id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false, fl: null, dx: 0, dy: 0 };
+      return;
+    }
     if (!w) return;
     if (w.classList.contains("hintfill")) { if (cur.mode === "sentence") wordSay(w.textContent); return; }   // 힌트로 고정된 카드는 못 끌지만 소리는 난다
     drg = { el: w, id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false, fl: null, dx: 0, dy: 0 };
@@ -607,9 +672,13 @@
   }, { passive: false });
   function dragUp(e) {
     if (!drg || e.pointerId !== drg.id) return;
-    var w = drg.el;
+    var d0 = drg, w = d0.el || d0.btn, wasOn = d0.on, inBox = !!(w && w.parentNode === $("g-sent"));
+    var wtxt = w ? w.textContent : "";
     dragEnd();
-    if (e.type !== "pointercancel" && cur && cur.mode === "sentence") wordSay(w.textContent);   // 소리는 문장 배열만(글자는 소리 없음)   // 놓거나 살짝 누르면 그 단어 소리
+    if (wasOn) noClickUntil = Date.now() + 120;
+    if (e.type !== "pointercancel" && cur && cur.mode === "sentence") {   // 소리는 문장 배열만(글자는 소리 없음): 카드를 놓거나 살짝 누르면 그 단어 소리, 풀 단어는 칸에 놓았을 때(누르기는 click이 처리)
+      if (!d0.pool || (wasOn && inBox)) wordSay(wtxt);
+    }
   }
   document.addEventListener("pointerup", dragUp);
   document.addEventListener("pointercancel", dragUp);
@@ -634,13 +703,20 @@
   // 문장 배열 힌트: 앞에서부터 맞게 놓인 카드 다음 자리에 정답 카드를 옮기고 그 앞쪽을 모두 고정한다(이미 전부 맞으면 힌트를 쓰지 않는다)
   function sentHint(q) {
     dragEnd(); sentSyncSeq();
-    var arr = items(q), seq = spell.seq, p = 0, k;
+    var arr = items(q), seq = spell.seq, n = arr.length, p = 0, k;
     while (p < seq.length && arr[seq[p].t] === ansAt(q, p)) p++;
-    if (p >= seq.length) return;
+    if (p >= n) return;   // 이미 전부 맞게 놓여 있으면 힌트를 쓰지 않는다
     if (!Game.hintSpell(cur)) return;
-    var j = p;
+    var mv = null, j = -1;
     for (k = p; k < seq.length; k++) if (arr[seq[k].t] === ansAt(q, p)) { j = k; break; }
-    var mv = seq.splice(j, 1)[0]; seq.splice(p, 0, mv);
+    if (j >= 0) mv = seq.splice(j, 1)[0];
+    else {   // v0.83: 문장 칸에 아직 없으면 풀에서 가져온다
+      var usedT = {};
+      for (k = 0; k < seq.length; k++) usedT[seq[k].t] = true;
+      for (k = 0; k < n; k++) if (!usedT[k] && arr[k] === ansAt(q, p)) { mv = { t: k, lock: false }; break; }
+    }
+    if (!mv) return;
+    seq.splice(p, 0, mv);
     for (k = 0; k <= p; k++) seq[k].lock = true;
     renderHint(); $("g-hint").disabled = true;
     renderSpell();
@@ -652,11 +728,11 @@
     if (!r) return;
     var i, k;
     var chips = $("g-sent").children;
-    for (i = 0; i < chips.length; i++) chips[i].className = wcls(r.correct ? "fill" : "bad");
+    for (i = 0; i < chips.length; i++) { if (!chips[i].classList.contains("wd")) continue; chips[i].className = wcls(r.correct ? "fill" : "bad"); }
     $("g-sent").classList.add("done");
     var box = $("g-opts").children;
     for (k = 0; k < box.length; k++) { box[k].disabled = true; box[k].className = "opt used"; }
-    $("g-erase").disabled = true;
+    $("g-erase").disabled = true; $("g-del").disabled = true; $("g-opts").classList.add("fin");   // v0.83: 낮은 화면에서는 답한 뒤 쓴 단어 풀을 숨긴다(정답 안내 문구 자리)
     feedback(r, q, cur.mode === "sentence" ? "아쉬워요. 정답은 \"" + q.en + "\"예요" : "아쉬워요. 정답은 " + q.en + "이에요");
   }
 
@@ -735,6 +811,7 @@
 
   function onPick(i) {
     if (!cur || cur.picked != null || cur.finished) return;
+    if (spell && dragMode()) { spellAdd(i); return; }   // v0.83: 문장 배열 풀 단어 누르기(v0.84: 철자 쓰기도)
     var q = Game.current(cur);
     var r = Game.pick(cur, i);
     if (!r) return;
@@ -1278,6 +1355,7 @@
     if (nx) { EJ.setSetting("next", nx.dataset.next); renderSettings(); sfx("click"); return; }
     var so = t.closest("#sty-box .so");
     if (so) { if (so.getAttribute("aria-disabled") !== "true") chooseStyle(so.dataset.style); return; }
+    if (noClickUntil && Date.now() < noClickUntil && t.closest("#g-opts .opt, #g-sent .wd")) return;   // v0.83: 끌기 직후의 클릭은 무시
     var cb = t.closest("button");   // 버튼 클릭 효과음(정답 고르기·듣기·결과 보기는 다른 소리가 나므로 제외)
     if (cb && !cb.disabled && !(cb.parentNode && cb.parentNode.id === "g-opts" && !spell) && cb.id !== "g-spk" &&
         !(cb.id === "g-next" && cb.textContent === "결과 보기")) sfx("click");
@@ -1321,6 +1399,7 @@
     if (t.closest("#g-spk")) { speakCurrent(true); return; }
     if (t.closest("#g-hint")) { onHint(); return; }
     if (t.closest("#g-erase")) { sentSubmit(); return; }
+    if (t.closest("#g-del")) { spellErase(); return; }
     if (t.closest("#g-next")) { if (jig) jigNext(); else next(); return; }
     if (t.closest("#g-exit")) { openExit(); return; }
     if (t.closest("#exit-no")) { closeExit(); return; }
