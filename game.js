@@ -227,7 +227,9 @@ var Game = (function () {
     var total = o.total || TOTAL;
     if (words.length < total) return null;
     var pool = o.pool || words;   // 보기(오답) 후보: 복습은 같은 레벨 전체 단어
-    var picked = o.ordered ? words.slice(0, total) : shuffle(words, rng).slice(0, total);
+    // v0.79: 복습 단어(o.extra, 이전 레벨 단어) o.extraN개를 섞는다. 복습 판(ordered)은 제외, 부족하면 있는 만큼만
+    var nx = (!o.ordered && o.extra && o.extra.length) ? Math.min(o.extraN || 0, o.extra.length, total - 1) : 0;
+    var picked = o.ordered ? words.slice(0, total) : (nx > 0 ? shuffle(shuffle(words, rng).slice(0, total - nx).concat(shuffle(o.extra, rng).slice(0, nx)), rng) : shuffle(words, rng).slice(0, total));
     var qs = [];
     var lcfg = o.mode === "listen" ? listenCfg(o.lv, o.review) : null;
     var sents = (lcfg && lcfg.sent > 0 && o.sentences && o.sentences.length >= 4) ? o.sentences : null;

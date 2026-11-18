@@ -178,6 +178,15 @@
     return out;
   }
 
+  // v0.79: 이전 레벨(1~n-1) 단어 = 복습용. 상위 레벨은 포함하지 않는다
+  var REVIEW_MIX = 3;   // 한 판 10문제 중 이전 레벨 단어 수(단어 모드만)
+  function wordsBefore(n, mode) {
+    if (mode === "sentence" || mode === "jigsaw") return undefined;
+    var out = [];
+    for (var i = 0; i < ALLW.length; i++) if (ALLW[i].lv < n) out.push(ALLW[i]);
+    return out;
+  }
+
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -656,7 +665,7 @@
     lastStage = stage; lastMode = mode; lastReview = false;
     $("game").classList.remove("review");
     if (mode === "listen" && !Sound.ok()) return false;
-    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode), sentences: mode === "listen" ? wordsOfStage(stage, "sentence") : undefined, dialogs: mode === "listen" && typeof DIALOGS !== "undefined" ? DIALOGS[String(Game.bandOf(stage))] : undefined, sound: mode === "listen" && typeof SOUND !== "undefined" ? SOUND : undefined, allWords: mode === "listen" ? ALLW : undefined });
+    var g = Game.start({ lv: stage, mode: mode, words: wordsOfStage(stage, mode), extra: wordsBefore(stage, mode), extraN: REVIEW_MIX, sentences: mode === "listen" ? wordsOfStage(stage, "sentence") : undefined, dialogs: mode === "listen" && typeof DIALOGS !== "undefined" ? DIALOGS[String(Game.bandOf(stage))] : undefined, sound: mode === "listen" && typeof SOUND !== "undefined" ? SOUND : undefined, allWords: mode === "listen" ? ALLW : undefined });
     if (!g) return false;
     cur = g;
     show("game");
