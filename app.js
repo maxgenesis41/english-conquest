@@ -223,6 +223,7 @@
     return { ok: ok, speak: speak, stop: stop };
   })();
   // 소리 설정(저장값): 무음·효과음·스타일·단어 소리. 듣기 게임의 문제 소리는 무음이어도 나온다
+  function clearSnd(gr) { return gr === "S" || gr === "A" ? "fanfare" : "clear"; }   // v0.80: A 이상 클리어는 팡파레(v0.82: 만점도 같은 팡파레, 옛 perfect 소리는 sfx.js에 남김), B·C는 기존 소리
   function sfx(name) { var s = EJ.get("settings"); if (s.mute || !s.sfx) return; SFX.play(name, s.style); }
   function wordSay(text) { var s = EJ.get("settings"); if (s.mute || !s.word || !Sound.ok()) return; Sound.speak(text); }
   var playTimer = null;
@@ -868,12 +869,12 @@
       if (unlockMsg) { ban.appendChild(unlockBanner(lastStage + 1)); ufxStart(); }   // v0.57: 레벨 열림 축하 연출
       else if (pendNext && (r.grade === "S" || r.grade === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "칸 +1! (이 모드 " + slotAfter + "/" + xpNow.per + ")" : "이 모드 칸은 가득 찼어요 (칸을 채운 모드 " + xpNow.filled + "/" + xpNow.k + "개)"));
       resButtons(set, r.over, pending, pendLeft);
-      sfx(r.over ? "over" : perfect ? "perfect" : "clear");
+      sfx(r.over ? "over" : clearSnd(r.grade));
       if (unlockMsg) unlockSound(perfect);
       $("res-modal").style.display = "grid"; $("r-next").focus();
       if (window.Chr) { if (unlockMsg) Chr.pop("party", { over: true, ms: 3200 }); else if (r.over) Chr.pop("cry", { over: true, ms: 3500 }); }   // v0.72 축하, v0.74 체력 0이면 우는 모습
     } else {
-      sfx(perfect ? "perfect" : "clear");
+      sfx(clearSnd(r.grade));
       if (unlockMsg) unlockSound(perfect);
       var m2 = pickNext(set.next) || lastMode;
       if (!startGame(lastStage, m2)) startGame(lastStage, lastMode);
@@ -1163,7 +1164,7 @@
     else if (pendNext && (gr === "S" || gr === "A")) ban.appendChild(el("div", "banner up", slotAfter > slotBefore ? "칸 +1! (이 모드 " + slotAfter + "/" + xpNow.per + ")" : "이 모드 칸은 가득 찼어요 (칸을 채운 모드 " + xpNow.filled + "/" + xpNow.k + "개)"));
     else if (gr === "B" || gr === "C") ban.appendChild(el("div", "banner over", "퍼즐 " + (n - 1) + "개 이상 완성하면 칸이 올라가요"));
     resButtons(set, false, pending, pendLeft);
-    sfx(gr === "C" ? "over" : "clear");
+    sfx(gr === "C" ? "over" : clearSnd(gr));
     if (newly) unlockSound(false);
     $("res-modal").style.display = "grid";
     $("r-next").focus();

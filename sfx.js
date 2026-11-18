@@ -16,6 +16,15 @@ var SFX = (function () {
     for (i = 0; i < sp.length; i++) n.push([sp[i], 1.05 + i * 0.09, 0.12, "sine", a * 0.45]);
     return n;
   }
+  // v0.80 A 이상 클리어 팡파레(약 1.7초): 종소리 4음 상승 → 화음 길게 + 낮은 받침음 → 반짝이는 높은 음(사용자 후보 2 선택). u=기본 음량(retro는 boost 1.5를 감안해 나눔), wb=종소리 파형, wc=화음 파형. v0.81: 3개 스타일 모두 후보 2와 같은 파형(사인 종소리+삼각파 화음) — retro 사각파는 옛 clear 아르페지오와 비슷하게 들려 종소리가 안 났음
+  function fanA(u, wb, wc) {
+    var n = [], i, bell = [1047, 1319, 1568, 2093], sp = [2093, 2637, 3136, 2637, 3136, 3520];
+    for (i = 0; i < bell.length; i++) { n.push([bell[i], i * 0.1, 0.6, wb, u]); n.push([bell[i] * 2, i * 0.1, 0.3, wb, u * 0.24]); }
+    [523, 659, 784, 1047].forEach(function (f) { n.push([f, 0.45, 1.1, wc, u * 0.7]); });
+    for (i = 0; i < sp.length; i++) n.push([sp[i], 0.5 + i * 0.09, 0.25, "sine", u * 0.36]);
+    n.push([131, 0.45, 1.1, wc, u * 0.8]);
+    return n;
+  }
   var SETS = {
     retro: { boost: 1.5, s: {
       click: [[1200, 0, 0.04, "square", 0.12]],
@@ -25,6 +34,7 @@ var SFX = (function () {
       wrong: [[200, 0, 0.1, "square", 0.14], [150, 0.1, 0.18, "square", 0.14]],
       combo: [[523, 0, 0.05, "square", 0.12], [659, 0.05, 0.05, "square", 0.12], [784, 0.1, 0.05, "square", 0.12], [1047, 0.15, 0.05, "square", 0.12], [1319, 0.2, 0.15, "square", 0.13]],
       clear: [[523, 0, 0.08, "square", 0.12], [659, 0.08, 0.08, "square", 0.12], [784, 0.16, 0.08, "square", 0.12], [1047, 0.24, 0.08, "square", 0.12], [784, 0.32, 0.08, "square", 0.12], [1047, 0.4, 0.08, "square", 0.12], [1319, 0.48, 0.35, "square", 0.13]],
+      fanfare: fanA(0.2 / 1.5, "sine", "triangle"),
       perfect: fan("square", 0.09, { roll: true, run: 0.08, stab: 0.1, hold: 0.9, bass: "square" }),
       over: [[392, 0, 0.12, "square", 0.12], [370, 0.12, 0.12, "square", 0.12], [349, 0.24, 0.12, "square", 0.12], [330, 0.36, 0.35, "square", 0.13, 200]],
       unlock: [[1800, 0, 0.03, "square", 0.096], [2394.0, 0.03, 0.04, "square", 0.096], [784, 0.1, 0.09, "square", 0.12], [988, 0.17, 0.09, "square", 0.12], [1175, 0.24000000000000002, 0.09, "square", 0.12], [1568, 0.31000000000000005, 0.09, "square", 0.12], [2093, 0.38, 0.32, "square", 0.12], [2637, 0.5, 0.12, "sine", 0.06], [3136, 0.6, 0.14, "sine", 0.054], [3520, 0.7, 0.2, "sine", 0.048]]
@@ -37,6 +47,7 @@ var SFX = (function () {
       wrong: [[260, 0, 0.22, "sawtooth", 0.18, 170], [180, 0.12, 0.2, "sawtooth", 0.14, 120]],
       combo: [[784, 0, 0.07, "triangle", 0.28], [988, 0.07, 0.07, "triangle", 0.28], [1175, 0.14, 0.07, "triangle", 0.28], [1568, 0.21, 0.2, "triangle", 0.3]],
       clear: [[523, 0, 0.12, "triangle", 0.3], [659, 0.12, 0.12, "triangle", 0.3], [784, 0.24, 0.12, "triangle", 0.3], [1047, 0.36, 0.4, "triangle", 0.32], [1319, 0.36, 0.4, "sine", 0.15], [1568, 0.36, 0.4, "sine", 0.1]],
+      fanfare: fanA(0.2, "sine", "triangle"),
       perfect: fan("triangle", 0.2, { roll: true, run: 0.1, stab: 0.12, hold: 1.0, bass: "triangle" }),
       over: [[392, 0, 0.18, "triangle", 0.28], [330, 0.18, 0.18, "triangle", 0.28], [262, 0.36, 0.18, "triangle", 0.28], [196, 0.54, 0.4, "triangle", 0.28, 150]],
       unlock: [[1800, 0, 0.03, "triangle", 0.224], [2394.0, 0.03, 0.04, "triangle", 0.224], [784, 0.1, 0.09, "triangle", 0.28], [988, 0.17, 0.09, "triangle", 0.28], [1175, 0.24000000000000002, 0.09, "triangle", 0.28], [1568, 0.31000000000000005, 0.09, "triangle", 0.28], [2093, 0.38, 0.4, "triangle", 0.28], [2637, 0.5, 0.12, "sine", 0.14], [3136, 0.6, 0.14, "sine", 0.126], [3520, 0.7, 0.2, "sine", 0.112]]
@@ -49,6 +60,7 @@ var SFX = (function () {
       wrong: [[330, 0, 0.3, "sine", 0.3, 247], [311, 0.02, 0.3, "triangle", 0.1, 233]],
       combo: [[880, 0, 0.25, "sine", 0.24], [1109, 0.08, 0.25, "sine", 0.24], [1319, 0.16, 0.3, "sine", 0.24], [1760, 0.24, 0.45, "sine", 0.26]],
       clear: [[523, 0, 0.5, "sine", 0.26], [659, 0.15, 0.5, "sine", 0.26], [784, 0.3, 0.55, "sine", 0.26], [1047, 0.45, 0.9, "sine", 0.3], [2094, 0.45, 0.5, "sine", 0.07]],
+      fanfare: fanA(0.2, "sine", "triangle"),
       perfect: fan("sine", 0.16, { roll: false, run: 0.5, stab: 0.35, hold: 1.6, bass: "sine" }),
       over: [[440, 0, 0.4, "sine", 0.26], [349, 0.3, 0.4, "sine", 0.26], [294, 0.6, 0.7, "sine", 0.26, 262]],
       unlock: [[1568, 0, 0.03, "sine", 0.192], [2085.44, 0.03, 0.04, "sine", 0.192], [784, 0.1, 0.09, "sine", 0.24], [988, 0.17, 0.09, "sine", 0.24], [1175, 0.24000000000000002, 0.09, "sine", 0.24], [1568, 0.31000000000000005, 0.09, "sine", 0.24], [2093, 0.38, 0.6, "sine", 0.24], [2637, 0.5, 0.12, "sine", 0.12], [3136, 0.6, 0.14, "sine", 0.108], [3520, 0.7, 0.2, "sine", 0.096]]
@@ -82,7 +94,7 @@ var SFX = (function () {
     return out;
   }
 
-  // name: click / correct / correct3·5·10(콤보 단계) / wrong / combo / clear / perfect(v0.49 만점) / unlock(v0.57 레벨 열림) / over / tick(주황) / tickfast(빨강). 재생을 시작했으면 true
+  // name: click / correct / correct3·5·10(콤보 단계) / wrong / combo / clear / perfect(v0.49 만점) / fanfare(v0.80 A 이상 클리어) / unlock(v0.57 레벨 열림) / over / tick(주황) / tickfast(빨강). 재생을 시작했으면 true
   function play(name, style) {
     var set = SETS[style] || SETS.retro, notes = set.s[name], m = /^correct(3|5|10)$/.exec(name);
     if (m) notes = tierNotes(set.s.correct, +m[1]);
