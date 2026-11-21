@@ -22,6 +22,19 @@
 </svg>
 <div class="app">
 
+  <!-- 0. 캐릭터 선택 (처음 시작할 때 한 번, v0.87) -->
+  <section class="screen" id="job">
+    <div class="logo">
+      <h1 class="pop">영어정복</h1>
+      <p>함께할 캐릭터를 골라 주세요</p>
+    </div>
+    <div class="jobgrid" role="radiogroup" aria-label="캐릭터 선택">
+      <button type="button" class="jobcard" data-jobpick="warrior" role="radio" aria-checked="false"><span class="jimg"><img src="img/chr/l/idle.webp" alt="" draggable="false"></span><b>전사</b><i class="jchk" aria-hidden="true"></i></button>
+      <button type="button" class="jobcard" data-jobpick="wizard" role="radio" aria-checked="false"><span class="jimg"><img src="img/chr/wiz/l/idle.webp" alt="" draggable="false"></span><b>마법사</b><i class="jchk" aria-hidden="true"></i></button>
+    </div>
+    <button type="button" class="btn" id="job-go" disabled>이 캐릭터로 시작</button>
+  </section>
+
   <!-- 1. 홈 -->
   <section class="screen" id="home">
     <button class="round gear" data-go="settings" aria-label="설정"><svg class="ic"><use href="#i-gear"/></svg></button>
@@ -35,7 +48,7 @@
     <div class="chrdock" id="dock-home">
       <div class="dl"><div class="chrbw" aria-live="off"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
-        <p class="ver">v0.84</p>
+        <p class="ver">v0.87</p>
       </div>
       <img class="chrimg" alt="" draggable="false">
     </div>

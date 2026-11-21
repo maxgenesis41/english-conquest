@@ -1257,9 +1257,18 @@
     if (name === "review") { rvLv = 0; rvPage = 1; renderReview(); }
     if (name === "modes") renderModes();
     if (name === "settings") { setTab("game"); renderSettings(); }
+    if (name === "job") renderJob();
     bgmSync();   // 게임 화면에서만 재생, 다른 화면으로 가면 정지
     if (window.Chr) { if (name === "modes" || name === "game") Chr.setBand(bandOf(lastStage).id); Chr.screen(name); }   // v0.72: 홈·모드 선택은 대기 캐릭터, 그 밖의 화면에서는 캐릭터를 숨긴다
     window.scrollTo(0, 0);
+  }
+
+  // v0.87: 처음 시작할 때 캐릭터(직업)를 한 번 고른다(이후 바꿀 수 없음). 카드를 고르기만 해서는 저장하지 않고 "이 캐릭터로 시작"을 눌렀을 때 한 번 저장한다
+  var jobSel = "";
+  function renderJob() {
+    var cs = document.querySelectorAll("#job .jobcard");
+    for (var i = 0; i < cs.length; i++) cs[i].setAttribute("aria-checked", cs[i].dataset.jobpick === jobSel ? "true" : "false");
+    $("job-go").disabled = !jobSel;
   }
 
   // 설정 화면: 저장된 값을 읽어 스위치·스타일을 표시한다(읽기만 하고 저장하지 않음)
@@ -1353,6 +1362,9 @@
     if (pv) { if (!pv.disabled) previewStyle(pv.dataset.style); return; }
     var nx = t.closest("#next-box .so");
     if (nx) { EJ.setSetting("next", nx.dataset.next); renderSettings(); sfx("click"); return; }
+    var jp = t.closest("#job .jobcard");   // v0.87 캐릭터 선택 화면
+    if (jp) { jobSel = jp.dataset.jobpick; renderJob(); sfx("click"); return; }
+    if (t.closest("#job-go")) { if (jobSel) { EJ.setSetting("job", jobSel); if (window.Chr) Chr.setJob(jobSel); sfx("click"); show("home"); } return; }
     var so = t.closest("#sty-box .so");
     if (so) { if (so.getAttribute("aria-disabled") !== "true") chooseStyle(so.dataset.style); return; }
     if (noClickUntil && Date.now() < noClickUntil && t.closest("#g-opts .opt, #g-sent .wd")) return;   // v0.83: 끌기 직후의 클릭은 무시
@@ -1454,5 +1466,7 @@
   });
 
   var h = (location.hash || "#home").slice(1);
-  show(h === "modes" || h === "review" || h === "settings" ? h : h === "wordbook" ? "review" : "home");
+  var jb0 = EJ.get("settings").job;   // v0.87: 캐릭터를 아직 안 골랐으면 선택 화면부터(읽기만 하고 저장하지 않음)
+  if (jb0 && window.Chr) Chr.setJob(jb0);
+  if (!jb0) show("job"); else show(h === "modes" || h === "review" || h === "settings" ? h : h === "wordbook" ? "review" : "home");
 })();

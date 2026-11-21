@@ -804,3 +804,27 @@ button.sw { padding: 0; cursor: pointer; }
   #game .sent.ltr.xs .wd.ltr { width: 28px; height: 34px; font-size: 16px; }
 }
 @media (max-width: 340px) { .wpool.ltr .opt { width: 40px; height: 48px; font-size: 24px; } .wpool.ltr.sm .opt { width: 36px; height: 44px; font-size: 22px; } .wpool.ltr.xs .opt { width: 30px; height: 40px; font-size: 18px; } }
+
+
+/* v0.87 캐릭터 선택 화면(고정 크기, 스크롤 없음 — P-7). 두 캐릭터의 머리~발끝 높이를 같게 맞춘다: 이미지는 같은 높이(400px)로 만들어져 있어
+   마법사(가로 416)가 전사(가로 321)보다 넓다 → 같은 배율로 그리면 마법사만 가로가 넘쳐 오른쪽이 카드 끝에서 잘린다(전사 날개 끝이 잘린 것처럼). 발끝은 같은 줄에 둔다 */
+#job.screen.on { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; padding: 12px 14px 14px; overflow: hidden; }
+#job .logo { flex: none; padding: 8px 0 8px; }
+#job .logo h1 { font-size: 36px; }
+#job .logo p { margin-top: 6px; font-size: 13px; }
+.jobgrid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 12px; margin: 6px 0 14px; }
+.jobcard { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 0 0 12px; border: 3px solid var(--ink); border-radius: 20px; box-shadow: 0 5px 0 var(--ink); background: linear-gradient(#fff, #EAF8FF); color: var(--ink); font-family: inherit; cursor: pointer; overflow: hidden; }
+.jobcard:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.jobcard:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.jobcard .jimg { position: relative; display: block; width: 100%; aspect-ratio: 1 / 1.14; flex: none; }
+.jobcard .jimg img { position: absolute; bottom: 4px; height: auto; pointer-events: none; }
+.jobcard[data-jobpick="warrior"] .jimg img { width: 88%; left: 6%; }   /* 가로 321 → 같은 배율에서 마법사(114%)의 321/416 */
+.jobcard[data-jobpick="wizard"] .jimg img { width: 114%; left: 0; }   /* 오른쪽이 카드 밖으로 나가 잘린다 */
+.jobcard b { flex: none; margin-top: 6px; font-size: 24px; font-weight: 700; line-height: 1.1; }
+.jobcard[aria-checked="true"] { background: linear-gradient(#FFF7D6, #FFE9A0); transform: translateY(-2px); box-shadow: 0 7px 0 var(--ink), 0 0 0 5px var(--yellow); }
+.jobcard .jchk { position: absolute; bottom: 10px; right: 8px; width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; display: none; }
+.jobcard[aria-checked="true"] .jchk { display: block; background: var(--green); }
+.jobcard[aria-checked="true"] .jchk::after { content: ""; position: absolute; left: 7px; top: 2px; width: 7px; height: 13px; border: solid #fff; border-width: 0 3px 3px 0; transform: rotate(45deg); filter: drop-shadow(0 1px 0 var(--ink)); }
+#job .btn { flex: none; height: 52px; margin-bottom: 0; }
+#job .btn:disabled { --c: var(--gray); border-color: #8C9AB8; box-shadow: 0 6px 0 #8C9AB8, inset 0 -6px 0 rgba(0,0,0,.08); text-shadow: none; transform: none; cursor: default; }
+@media (max-height: 600px) { #job .logo h1 { font-size: 30px; } #job .logo { padding: 2px 0 4px; } .jobcard b { font-size: 20px; margin-top: 4px; } .jobcard .jimg { aspect-ratio: 1 / 1.1; } }

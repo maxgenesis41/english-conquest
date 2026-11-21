@@ -1,10 +1,11 @@
 // 영어정복 캐릭터·말풍선 (v0.72): 홈·모드 선택에서는 대기 캐릭터+말풍선, 게임 중에는 상황에 맞는 캐릭터가 잠깐 나왔다 사라진다.
-// 화면 표시만 하고 저장·게임 규칙에는 관여하지 않는다(읽기·저장 없음). 이미지는 img/chr/<등급 코드>/<상황>.webp (대기 이미지 idle은 평민~전설 10개 등급 모두 있고, 표정 이미지는 평민~에픽 9개 등급에 있고 전설 l만 "준비중" 표시, v0.78)
+// 화면 표시만 하고 저장·게임 규칙에는 관여하지 않는다(읽기·저장 없음). 이미지는 img/chr/<등급 코드>/<상황>.webp (대기 이미지 idle은 평민~전설 10개 등급 모두 있고, 표정 이미지는 평민~전설 10개 등급 모두 있음(전설은 v0.86)). 직업 이미지(마법사)는 img/chr/wiz/<등급 코드>/에 대기 이미지만 보관 중(v0.86, 화면 연결은 직업 선택 단계)
 (function () {
   "use strict";
 
+  var JOB = "warrior";   // 직업: warrior(전사)·wizard(마법사). app.js가 Chr.setJob으로 정한다(v0.87)
   var BAND = "c";   // 지금 보여 줄 등급 코드(app.js가 Chr.setBand로 바꾼다)
-  var POSES = { c: true, b: true, t: true, f: true, w: true, e: true, m: true, g: true, p: true };   // 표정 이미지(smile 등 6종)가 있는 등급(평민~에픽, v0.78). 전설(l)은 아직 없어 "준비중". 새 등급의 표정 이미지가 생기면 여기에 추가한다
+  var POSES = { c: true, b: true, t: true, f: true, w: true, e: true, m: true, g: true, p: true, l: true };   // 표정 이미지(smile 등 6종)가 있는 등급(평민~전설, 전설은 v0.86). 새 등급·직업의 표정 이미지가 생기면 여기에 추가한다
   var KINDS = ["idle", "smile", "happy", "sad", "cheer", "danger", "party"];
 
   // 상황별 대사 후보(\n은 줄바꿈). 같은 상황에서 직전과 같은 대사는 연속으로 나오지 않는다
@@ -30,11 +31,12 @@
     last[key] = i;
     return a[i];
   }
-  function src(kind) { return "img/chr/" + BAND + "/" + kind + ".webp"; }
+  // 마법사는 표정 이미지가 아직 없어 모든 상황에 그 등급의 대기 이미지(img/chr/wiz/<등급 코드>/idle.webp)를 쓴다. 표정 시트가 오면 POSES처럼 확장한다
+  function src(kind) { if (JOB === "wizard") return "img/chr/wiz/" + BAND + "/idle.webp"; return "img/chr/" + BAND + "/" + kind + ".webp"; }
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
 
   // 이미지 미리 받기(처음 나올 때 깜빡이지 않게). 실패해도 게임에는 영향 없다
-  function preload() { var im = new Image(); im.src = src("idle"); if (!POSES[BAND]) return; for (var i = 0; i < KINDS.length; i++) { im = new Image(); im.src = src(KINDS[i]); } }
+  function preload() { var im = new Image(); im.src = src("idle"); if (JOB === "wizard" || !POSES[BAND]) return; for (var i = 0; i < KINDS.length; i++) { im = new Image(); im.src = src(KINDS[i]); } }
 
   // 말풍선: 둥근 네모+꼬리를 SVG 경로 하나(닫힌 선 1개)로 그려 겹치는 선·어긋남이 없게 한다. 글 크기가 바뀌면 다시 그린다(v0.73)
   var SVGNS = "http://www.w3.org/2000/svg", R = 16, TH = 9, TL = 13, SW = 3;   // 모서리 반지름, 꼬리 밑변 절반, 꼬리 길이, 선 굵기
@@ -119,7 +121,7 @@
       h = Math.min(170, Math.floor(f.avail - 8)); bottom = Math.round(window.innerHeight - f.bottom) + 6;
     }
     popBox.textContent = ""; setBubble(popBox, pickLine(kind));
-    var has = !!POSES[BAND];   // 표정 이미지가 없는 등급은 "준비중" 상자로 대신한다
+    var has = JOB === "wizard" || !!POSES[BAND];   // 표정 이미지가 없는 등급은 "준비중" 상자로 대신한다
     popImg.style.display = has ? "" : "none"; popPh.style.display = has ? "none" : "";
     if (has) popImg.src = src(IMG_OF[kind]);
     pop.style.height = h + "px"; pop.style.bottom = bottom + "px";
@@ -149,6 +151,13 @@
       BAND = id; preload();
       var d = dockOf("home"), e = dockOf("modes"), i;
       for (i = 0; i < 2; i++) { var dk = [d, e][i], im = dk && dk.querySelector(".chrimg"); if (im) im.src = src("idle"); }
+    },
+    // 직업(캐릭터)이 정해지면 호출: 대기 이미지를 그 직업 것으로 바꾼다
+    setJob: function (j) {
+      if ((j !== "warrior" && j !== "wizard") || j === JOB) return;
+      JOB = j; preload();
+      var ids = ["home", "modes"], i;
+      for (i = 0; i < 2; i++) { var dk = dockOf(ids[i]), im = dk && dk.querySelector(".chrimg"); if (im) im.src = src("idle"); }
     },
     pop: show,
     hide: hide,
