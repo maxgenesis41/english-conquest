@@ -142,7 +142,7 @@
   var timer = null;     // 정답 후 자동 넘김
   var lastStage = 1, lastMode = "letter", lastReview = false;   // lastReview: 방금 한 판이 틀린 단어 복습인지
   function $(id) { return document.getElementById(id); }
-  function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+  function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } ansCancel(); }
 
   // ===== 정답 연출 (v0.45) =====
   // 연속 정답 단계(3·5·10)에 따라 리본·카드 빛·연속 칩의 색을 바꾼다(v0.67부터 별 없음). 점수·저장 규칙은 건드리지 않고, 복습 판에는 쓰지 않는다
@@ -268,6 +268,32 @@
   function clearSnd(gr) { return gr === "S" || gr === "A" ? "fanfare" : "clear"; }   // v0.80: A 이상 클리어는 팡파레(v0.82: 만점도 같은 팡파레, 옛 perfect 소리는 sfx.js에 남김), B·C는 기존 소리
   function sfx(name) { var s = EJ.get("settings"); if (s.mute || !s.sfx) return; SFX.play(name, s.style); }
   function wordSay(text) { var s = EJ.get("settings"); if (s.mute || !s.word || !Sound.ok()) return; Sound.speak(text); }
+  // v0.90: 답을 낸 뒤 그 단어·문장을 설정한 음성으로 한 번 읽는다("단어 소리" 스위치·무음을 따름). 정답이면 읽기가 끝난 뒤(최대 6초) 다음으로 넘어간다
+  var ansTok = 0, ansCap = null, ansDelay = null;
+  function ansCancel() {   // 읽는 중이면 멈춘다(다음 문제·나가기·화면 이동). 읽는 중이 아니면 아무것도 건드리지 않는다
+    if (!ansCap && !ansDelay) return;
+    ansTok++; clearTimeout(ansCap); clearTimeout(ansDelay); ansCap = ansDelay = null; Sound.stop();
+  }
+  function ansText(q) { return cur && cur.mode === "listen" && q.kind === "dialog" ? q.options[q.answer] : q.en; }   // 대답 고르기는 질문이 이미 들렸으므로 정답 대답을 읽는다
+  function readAnswer(text, done) {   // 읽기를 시작하면 true(끝나면 done 호출), 무음·음성 없음·빈 글이면 false
+    var s = EJ.get("settings");
+    if (!text || s.mute || !s.word || !Sound.ok()) return false;
+    ansCancel();
+    var tok = ++ansTok, fired = false;
+    function fin(capped) {
+      if (fired || tok !== ansTok) return;
+      fired = true; clearTimeout(ansCap); clearTimeout(ansDelay); ansCap = ansDelay = null;
+      if (capped) Sound.stop();
+      if (done) done();
+    }
+    ansCap = setTimeout(function () { fin(true); }, 6000);
+    ansDelay = setTimeout(function () {   // 정답음·오답음이 먼저 나고 잠시 뒤에 읽는다
+      ansDelay = null;
+      if (tok !== ansTok) return;
+      if (!Sound.speak(text, null, function () { fin(false); })) fin(false);
+    }, 250);
+    return true;
+  }
   var playTimer = null;
   // 듣기 다시 듣기 표시(v0.59): 횟수 제한이 있으면 남은 횟수를 보여 주고, 0이면 스피커를 끈다(문제를 푼 뒤에는 횟수와 무관하게 들을 수 있다)
   function drawReplays() {
@@ -832,13 +858,14 @@
     if (sub) { sub.className = "sub fbmsg " + (r.correct ? "good" : "bad"); sub.textContent = msg; }
     chrReact(r);
     if (r.correct && !r.over && !r.last) {
-      timer = setTimeout(next, 800);
+      if (!readAnswer(ansText(q), function () { timer = setTimeout(next, 350); })) timer = setTimeout(next, 800);   // v0.90: 읽기가 끝난 뒤 넘어간다
     } else {
       var nb = $("g-next");
       nb.textContent = (r.over || r.last) ? "결과 보기" : "다음 문제";
       nb.style.display = "block";
       $("g-foot").classList.add("fb");   // 힌트·지우기 자리를 다음 버튼이 쓴다
       nb.focus();
+      readAnswer(ansText(q));   // v0.90
     }
   }
 
@@ -1151,6 +1178,7 @@
   var jig = null, jigT = null;
   function jigLeave() {   // 직소 화면 정리(다른 게임을 시작하거나 나갈 때)
     if (jigT) { clearTimeout(jigT); jigT = null; }
+    ansCancel();
     jig = null;
     $("game").classList.remove("jig");
   }
@@ -1239,11 +1267,13 @@
     if (window.Chr) Chr.pop(ok ? "happy" : "sad", { ms: ok ? 1000 : 1800 });   // v0.72: 빈 공간이 모자라면 나오지 않는다
     jig.sub.className = "sub fbmsg " + (ok ? "good" : "bad");
     jig.sub.textContent = ok ? "정답이에요!" : "아쉬워요. 초록색이 정답이에요";
-    if (ok) { jigT = setTimeout(jigNext, 800); }
-    else { var nb = $("g-next"); nb.textContent = "다음"; nb.style.display = "block"; $("g-foot").classList.add("fb"); nb.focus(); }
+    var jt = s.k === "x" ? "" : s.p[s.k].en;   // v0.90: 단어를 고르는 단계만 그 단어를 읽는다(겹치는 알파벳 단계는 읽지 않음)
+    if (ok) { if (!readAnswer(jt, function () { jigT = setTimeout(jigNext, 350); })) jigT = setTimeout(jigNext, 800); }
+    else { var nb = $("g-next"); nb.textContent = "다음"; nb.style.display = "block"; $("g-foot").classList.add("fb"); nb.focus(); readAnswer(jt); }
   }
   function jigNext() {
     if (jigT) { clearTimeout(jigT); jigT = null; }
+    ansCancel();
     if (!jig) return;
     var p = jig.d.puzzles[jig.pi];
     jig.si++;
@@ -1291,6 +1321,7 @@
   }
 
   function show(name) {
+    ansCancel();   // v0.90: 화면을 옮기면 읽던 소리를 멈춘다
     var screens = document.querySelectorAll(".screen");
     for (var i = 0; i < screens.length; i++) {
       screens[i].classList.toggle("on", screens[i].id === name);
