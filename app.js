@@ -206,21 +206,63 @@
     function enVoices() { var v = voices(), o = []; for (var i = 0; i < v.length; i++) if (/^en/i.test(v[i].lang || "")) o.push(v[i]); return o; }
     // 음성 목록이 아직 비어 있으면(비동기 로딩) 일단 가능으로 본다
     function ok() { if (!api()) return false; return voices().length === 0 || enVoices().length > 0; }
-    function pick() { var e = enVoices(); for (var i = 0; i < e.length; i++) if (/^en[-_]US$/i.test(e[i].lang)) return e[i]; return e[0] || null; }
+    // v0.88 음성 선택: 설정(voiceRegion·voiceGender)에 맞는 음성을 고른다. 기기에 없으면 가까운 음성으로 대신한다
+    var VR = { us: /^en[-_]US$/i, uk: /^en[-_]GB$/i, au: /^en[-_]AU$/i }, VR_NAME = { us: "미국", uk: "영국", au: "호주" };   // au는 화면에 없지만 대체 음성 이름 표시에만 쓴다(v0.89)
+    var FEM = /zira|hazel|susan|samantha|karen|catherine|serena|kate\b|moira|tessa|victoria|allison|ava\b|fiona|jenny|aria\b|sonia|libby|maisie|natasha|clara|emma|amy\b|joanna|salli|kimberly|ivy\b|nicole|olivia|michelle|annette|freya|heather|linda|sara\b|zoe\b/i;
+    var MAL = /david|mark\b|george|james|richard|daniel|alex\b|fred\b|tom\b|lee\b|oliver|arthur|gordon|rishi|guy\b|davis|ryan|thomas|william|liam|eric\b|brian|christopher|matthew|justin|joey\b|kevin|russell|geraint|aaron|nathan|jason/i;
+    function regionOf(v) { for (var k in VR) if (VR[k].test(v.lang || "")) return k; return ""; }
+    // 성별: 브라우저 음성에는 성별 항목이 없어 이름·주소의 female/male 표시나 흔한 이름으로 추정한다. 모르면 ""
+    function genderOf(v) {
+      var t = (v.name || "") + " " + (v.voiceURI || "");
+      if (/female/i.test(t)) return "f";
+      if (/(^|[^a-z])male([^a-z]|$)/i.test(t)) return "m";
+      var n = v.name || "";
+      if (FEM.test(n)) return "f";
+      if (MAL.test(n)) return "m";
+      return "";
+    }
+    function pref() {
+      var s = EJ.get("settings");
+      return { r: s.voiceRegion === "uk" ? "uk" : "us", g: s.voiceGender === "f" ? "f" : "m" };   // v0.89: 옛 저장값(호주·자동)은 미국·남자로 본다
+    }
+    function hasVoices() { return !!api() && enVoices().length > 0; }
+    function hasRegion(r) { var e = enVoices(); for (var i = 0; i < e.length; i++) if (regionOf(e[i]) === r) return true; return false; }
+    function hasGender(r, g) {
+      var e = enVoices(), any = !hasRegion(r);   // 그 국가 음성이 기기에 없으면 전체 영어 음성에서 찾는다
+      for (var i = 0; i < e.length; i++) if ((any || regionOf(e[i]) === r) && genderOf(e[i]) === g) return true;
+      return false;
+    }
+    // 순서: 국가+성별 → 국가 → 성별 → 미국 → 첫 영어 음성. exact=선택한 국가·성별 그대로인지
+    function choose(r, g) {
+      var e = enVoices(), a = [], b = [], c = [], i;
+      for (i = 0; i < e.length; i++) {
+        var inR = regionOf(e[i]) === r, gm = genderOf(e[i]) === g;
+        if (inR) a.push(e[i]);
+        if (inR && gm) b.push(e[i]);
+        if (gm) c.push(e[i]);
+      }
+      if (b.length) return { voice: b[0], exact: true };
+      if (a.length) { var known = false; for (i = 0; i < a.length; i++) if (genderOf(a[i])) known = true; return { voice: a[0], exact: !known }; }   // 그 국가 음성의 성별을 하나도 모르면 그대로 쓴 것으로 본다
+      if (c.length) return { voice: c[0], exact: false };
+      for (i = 0; i < e.length; i++) if (/^en[-_]US$/i.test(e[i].lang)) return { voice: e[i], exact: false };
+      return { voice: e[0] || null, exact: false };
+    }
+    function current() { var p = pref(); return choose(p.r, p.g); }
+    function pick() { return current().voice; }
     function speak(text, onstart, onend, rate) {
       var s = api(); if (!s) return false;
       try {
         s.cancel();
         var u = new window.SpeechSynthesisUtterance(text);
         u.lang = "en-US"; u.rate = rate || 0.85;
-        var v = pick(); if (v) u.voice = v;
+        var v = pick(); if (v) { u.voice = v; u.lang = String(v.lang || "en-US").replace("_", "-"); }
         u.onstart = function () { bgmDuck(true); if (onstart) onstart(); };
         u.onend = u.onerror = function () { bgmDuck(false); if (onend) onend(); };
         s.speak(u); return true;
       } catch (e) { return false; }
     }
     function stop() { try { var s = api(); if (s) s.cancel(); } catch (e) {} bgmDuck(false); }
-    return { ok: ok, speak: speak, stop: stop };
+    return { ok: ok, speak: speak, stop: stop, hasVoices: hasVoices, hasRegion: hasRegion, hasGender: hasGender, pref: pref, current: current, regionOf: regionOf, regionName: VR_NAME };
   })();
   // 소리 설정(저장값): 무음·효과음·스타일·단어 소리. 듣기 게임의 문제 소리는 무음이어도 나온다
   function clearSnd(gr) { return gr === "S" || gr === "A" ? "fanfare" : "clear"; }   // v0.80: A 이상 클리어는 팡파레(v0.82: 만점도 같은 팡파레, 옛 perfect 소리는 sfx.js에 남김), B·C는 기존 소리
@@ -1256,7 +1298,7 @@
     if (name === "home") { viewBand = -1; renderHome(); }
     if (name === "review") { rvLv = 0; rvPage = 1; renderReview(); }
     if (name === "modes") renderModes();
-    if (name === "settings") { setTab("game"); renderSettings(); }
+    if (name === "settings") { vIdx = 0; setTab("game"); renderSettings(); }
     if (name === "job") renderJob();
     bgmSync();   // 게임 화면에서만 재생, 다른 화면으로 가면 정지
     if (window.Chr) { if (name === "modes" || name === "game") Chr.setBand(bandOf(lastStage).id); Chr.screen(name); }   // v0.72: 홈·모드 선택은 대기 캐릭터, 그 밖의 화면에서는 캐릭터를 숨긴다
@@ -1283,6 +1325,7 @@
     sw("sw-bgm", s.bgm !== false, s.mute);
     var bo = s.mute || s.bgm === false, bv = s.bgmVol === undefined ? 100 : s.bgmVol, rg = $("bgm-vol");
     rg.value = String(bv); rg.disabled = bo; rg.style.setProperty("--p", bv + "%"); $("bgm-vol-val").textContent = bv + "%"; $("bgm-vol-row").classList.toggle("off", bo);
+    renderVoice();   // v0.88
     $("beta-band").value = s.betaBand || "";   // BETA-TEST
     var nr = document.querySelectorAll("#next-box .so");
     for (var q = 0; q < nr.length; q++) {
@@ -1300,6 +1343,43 @@
       rows[i].querySelector(".pl").disabled = off;
     }
   }
+  // 듣기 음성 카드(v0.88): 저장된 선택을 읽어 칩·미리듣기 줄을 표시한다(읽기만 하고 저장하지 않음)
+  var VOICE_SAMPLES = ["Hello, nice to meet you", "Can I have a bottle of water, please?", "What time is the next train?", "We have a new schedule for tomorrow", "Thank you so much for your help"], vIdx = 0;   // v0.89 미리듣기 샘플 문장(번호는 저장하지 않고 설정을 열 때마다 1번부터)
+  function voiceShort(n) { return String(n || "").replace(/^Microsoft\s+/i, "").replace(/\s+Online\s*\(Natural\).*$/i, "").replace(/\s*-\s*English.*$/i, ""); }
+  function renderVoice() {
+    var card = $("voice-card"); if (!card) return;
+    var has = Sound.hasVoices(), p = Sound.pref(), i, b, on, dis;
+    card.classList.toggle("off", !has);
+    $("v-sub").textContent = has ? "단어·듣기 문제를 읽어 주는 목소리" : "이 기기에는 영어 음성이 없어요";
+    var rb = card.querySelectorAll("[data-vr]");
+    for (i = 0; i < rb.length; i++) {
+      b = rb[i]; on = b.dataset.vr === p.r; dis = !has || !Sound.hasRegion(b.dataset.vr);
+      b.classList.toggle("on", on); b.setAttribute("aria-checked", on ? "true" : "false"); b.disabled = dis;
+    }
+    var gb = card.querySelectorAll("[data-vg]");
+    for (i = 0; i < gb.length; i++) {
+      b = gb[i]; on = b.dataset.vg === p.g; dis = !has || !Sound.hasGender(p.r, b.dataset.vg);
+      b.classList.toggle("on", on); b.setAttribute("aria-checked", on ? "true" : "false"); b.disabled = dis;
+    }
+    $("v-test").disabled = !has; $("v-next").disabled = !has;
+    $("v-sent").textContent = VOICE_SAMPLES[vIdx]; $("v-num").textContent = (vIdx + 1) + "/" + VOICE_SAMPLES.length;
+    var txt = "재생할 수 있는 영어 음성이 없어요";
+    if (has) {
+      var c = Sound.current(), v = c.voice, rg = v ? Sound.regionOf(v) : "";
+      txt = (c.exact ? "" : "선택한 음성이 없어 대신: ") + (rg ? Sound.regionName[rg] : (v && v.lang) || "") + " · " + (v ? voiceShort(v.name) : "");
+    }
+    $("v-now").textContent = txt;
+  }
+  function chooseVoice(key, val) {
+    EJ.setSetting(key, val);
+    if (key === "voiceRegion") {   // 새 국가에 같은 성별 음성이 없고 다른 성별이 있으면 그 성별로
+      var g = Sound.pref().g, o = g === "m" ? "f" : "m";
+      if (!Sound.hasGender(val, g) && Sound.hasGender(val, o)) EJ.setSetting("voiceGender", o);
+    }
+    renderSettings();
+    sfx("click");
+  }
+  function previewVoice() { if (Sound.hasVoices()) Sound.speak(VOICE_SAMPLES[vIdx]); }
   function toggleSetting(id) {
     var key = SW_KEYS[id];
     EJ.setSetting(key, !EJ.get("settings")[key]);
@@ -1356,6 +1436,12 @@
 
   document.addEventListener("click", function (e) {
     var t = e.target;
+    var vcr = t.closest("#voice-card [data-vr]");   // v0.88 듣기 음성
+    if (vcr) { if (!vcr.disabled) chooseVoice("voiceRegion", vcr.dataset.vr); return; }
+    var vcg = t.closest("#voice-card [data-vg]");
+    if (vcg) { if (!vcg.disabled) chooseVoice("voiceGender", vcg.dataset.vg); return; }
+    if (t.closest("#v-next")) { if (!$("v-next").disabled) { vIdx = (vIdx + 1) % VOICE_SAMPLES.length; renderVoice(); sfx("click"); } return; }   // v0.89 다음 문장
+    if (t.closest("#v-test")) { if (!$("v-test").disabled) previewVoice(); return; }
     var swb = t.closest(".sw");
     if (swb && SW_KEYS[swb.id]) { if (!swb.disabled) toggleSetting(swb.id); return; }
     var pv = t.closest(".pl");
@@ -1437,6 +1523,7 @@
     if (window.speechSynthesis && window.speechSynthesis.addEventListener) {
       window.speechSynthesis.addEventListener("voiceschanged", function () {
         if ($("modes").classList.contains("on")) renderModes();
+        if ($("settings").classList.contains("on")) renderSettings();   // v0.88 음성 목록이 늦게 로드될 때
       });
     }
   } catch (e) {}

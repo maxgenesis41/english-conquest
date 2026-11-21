@@ -828,3 +828,25 @@ button.sw { padding: 0; cursor: pointer; }
 #job .btn { flex: none; height: 52px; margin-bottom: 0; }
 #job .btn:disabled { --c: var(--gray); border-color: #8C9AB8; box-shadow: 0 6px 0 #8C9AB8, inset 0 -6px 0 rgba(0,0,0,.08); text-shadow: none; transform: none; cursor: default; }
 @media (max-height: 600px) { #job .logo h1 { font-size: 30px; } #job .logo { padding: 2px 0 4px; } .jobcard b { font-size: 20px; margin-top: 4px; } .jobcard .jimg { aspect-ratio: 1 / 1.1; } }
+
+/* v0.88 듣기 음성 선택(설정 "음성" 탭) */
+.set .vrow { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 2px solid #E3EBF7; }
+.set .vl2 { flex: none; width: 34px; font-size: 13px; font-weight: 700; color: var(--sub); }
+.vchips { flex: 1; min-width: 0; display: flex; gap: 6px; }
+.vc { flex: 1; min-width: 0; height: 36px; border-radius: 999px; border: 3px solid var(--ink); background: #fff; font-weight: 700; font-size: 14px; color: var(--ink); box-shadow: 0 3px 0 var(--ink); padding: 0 2px; white-space: nowrap; font-family: inherit; }
+.vc.on { background: var(--green); transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.vc:disabled { background: #EEF2F8; color: #8C9AB8; border-color: #B7C3D6; box-shadow: 0 3px 0 #B7C3D6; }
+.vc.on:disabled { background: var(--green); color: var(--ink); opacity: .6; }
+.vc:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.set .vtest { border-bottom: 0; }
+#voice-card .row { padding: 9px 0; }
+#voice-card.off .vrow:not(.vtest) { opacity: .45; }
+#voice-card.off #v-test { opacity: .45; }
+#v-now { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vtest .vnext { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; padding: 0; flex: none; color: var(--ink); }
+.vtest .vnext .ic { width: 18px; height: 18px; }
+.vtest .vnext:disabled { opacity: .45; }
+.vtest .vnext:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+#voice-card.off #v-next { opacity: .45; }
+.vn { font-style: normal; font-size: 12px; font-weight: 700; color: #3D8BFF; margin-left: 4px; }
+.set #v-sent { white-space: normal; color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1.3; }

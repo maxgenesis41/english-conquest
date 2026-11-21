@@ -16,6 +16,8 @@ var EJ = (function () {
   var LV_COUNT = 99;     // 레벨 수(전체 Lv 1개 체계)
   var STYLES = ["retro", "bright", "chime"]; // 효과음 스타일: 레트로 8비트 / 밝은 게임풍 / 부드러운 차임
   var NEXTS = ["order", "same"];
+  var VREGIONS = ["us", "uk"]; // 듣기 음성 국가: 미국·영국(v0.88 호주 포함 → v0.89 삭제, 사용자 요청)
+  var VGENDERS = ["m", "f"]; // 듣기 음성 성별: 남·여(기기 음성 이름으로 추정, v0.89에서 자동 삭제)
   var JOBS = ["warrior", "wizard"]; // 캐릭터(직업): 전사(남)·마법사(여). 설정값 job이 ""이면 아직 고르지 않은 것. 한 번 고르면 바꾸지 않는다(v0.87, 사용자 결정 2026-11-21)
   var BETA_IDS = ["c", "b", "t", "f", "w", "e", "m", "g", "p", "l"];   // BETA-TEST 임시: app.js 등급 id와 같다
 
@@ -33,7 +35,7 @@ var EJ = (function () {
       return { v: FORMATS.progress, lvs: lvs, modes: {} };
     }
     if (name === "wordbook" || name === "review") return { v: FORMATS[name], items: [] };
-    return { v: FORMATS.settings, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, timer: true, next: "order", bgm: true, bgmVol: 100, betaBand: "", job: "" };   // betaBand: BETA-TEST 임시(개발 완료 후 삭제) 시험할 등급 id, ""=끔
+    return { v: FORMATS.settings, sound: true, mute: false, sfx: true, style: "retro", word: true, result: true, timer: true, next: "order", bgm: true, bgmVol: 100, betaBand: "", job: "", voiceRegion: "us", voiceGender: "m" };   // betaBand: BETA-TEST 임시(개발 완료 후 삭제) 시험할 등급 id, ""=끔
   }
 
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
@@ -289,6 +291,8 @@ var EJ = (function () {
     else if (key === "next") { if (NEXTS.indexOf(value) < 0) return false; }
     else if (key === "mute" || key === "sfx" || key === "word" || key === "result" || key === "timer" || key === "bgm") { if (typeof value !== "boolean") return false; }
     else if (key === "betaBand") { if (typeof value !== "string" || (value !== "" && BETA_IDS.indexOf(value) < 0)) return false; }   // BETA-TEST
+    else if (key === "voiceRegion") { if (VREGIONS.indexOf(value) < 0) return false; }   // v0.88
+    else if (key === "voiceGender") { if (VGENDERS.indexOf(value) < 0) return false; }   // v0.88
     else if (key === "job") { if (JOBS.indexOf(value) < 0) return false; }   // v0.87 캐릭터(직업) 선택
     else if (key === "bgmVol") { if (typeof value !== "number" || value < 0 || value > 100 || value % 1 !== 0) return false; }
     else return false;

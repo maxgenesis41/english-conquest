@@ -48,7 +48,7 @@
     <div class="chrdock" id="dock-home">
       <div class="dl"><div class="chrbw" aria-live="off"></div>
     <div class="btns"><button class="btn yellow" data-go="review">틀린 단어 복습 (<span id="rv-count">0</span>)</button><p class="rv-guide" id="rv-guide" style="display:none">틀린 단어 복습을 마쳐야 다음 레벨로 이동할 수 있어요.</p></div>
-        <p class="ver">v0.87</p>
+        <p class="ver">v0.89</p>
       </div>
       <img class="chrimg" alt="" draggable="false">
     </div>
@@ -140,7 +140,7 @@
   <!-- 6. 설정 -->
   <section class="screen" id="settings">
     <div class="top"><button class="round" data-go="home" aria-label="뒤로"><svg class="ic"><use href="#i-back"/></svg></button><h1 class="pop">설정</h1></div>
-    <div class="tabs" role="tablist" aria-label="설정 구역"><button type="button" class="tab on" data-tab="game" role="tab" aria-selected="true">게임</button><button type="button" class="tab" data-tab="sfx" role="tab" aria-selected="false">효과음</button><button type="button" class="tab" data-tab="mus" role="tab" aria-selected="false">음악</button><button type="button" class="tab" data-tab="lang" role="tab" aria-selected="false">언어</button><button type="button" class="tab" data-tab="src" role="tab" aria-selected="false">출처</button></div>
+    <div class="tabs" role="tablist" aria-label="설정 구역"><button type="button" class="tab on" data-tab="game" role="tab" aria-selected="true">게임</button><button type="button" class="tab" data-tab="sfx" role="tab" aria-selected="false">효과음</button><button type="button" class="tab" data-tab="mus" role="tab" aria-selected="false">음악</button><button type="button" class="tab" data-tab="voice" role="tab" aria-selected="false">음성</button><button type="button" class="tab" data-tab="lang" role="tab" aria-selected="false">언어</button><button type="button" class="tab" data-tab="src" role="tab" aria-selected="false">출처</button></div>
     <div class="panes">
     <div class="pane on" id="p-game" role="tabpanel">
     <div class="chunk set">
@@ -171,6 +171,14 @@
     <div class="chunk set">
       <div class="row"><div class="rt"><b>배경음악</b><span>게임 중 흐르는 음악 · 콤보·시간이 줄면 빨라져요</span></div><button type="button" class="sw on" id="sw-bgm" role="switch" aria-checked="true" aria-label="배경음악"></button></div>
       <div class="row vol" id="bgm-vol-row"><div class="vt"><b>배경음악 볼륨</b><em id="bgm-vol-val">100%</em></div><div class="vs"><span class="vl">작게</span><input type="range" id="bgm-vol" min="0" max="100" step="10" value="100" aria-label="배경음악 볼륨"><span class="vl">크게</span></div><span class="vh">듣기 문제에서는 소리가 자동으로 줄어들어요</span></div>
+    </div>
+    </div>
+    <div class="pane" id="p-voice" role="tabpanel">
+    <div class="chunk set" id="voice-card">
+      <div class="row"><div class="rt"><b>듣기 음성</b><span id="v-sub">단어·듣기 문제를 읽어 주는 목소리</span></div></div>
+      <div class="vrow"><div class="vl2">국가</div><div class="vchips" role="radiogroup" aria-label="음성 국가"><button type="button" class="vc" data-vr="us" role="radio" aria-checked="false">미국</button><button type="button" class="vc" data-vr="uk" role="radio" aria-checked="false">영국</button></div></div>
+      <div class="vrow"><div class="vl2">성별</div><div class="vchips" role="radiogroup" aria-label="음성 성별"><button type="button" class="vc" data-vg="m" role="radio" aria-checked="false">남자</button><button type="button" class="vc" data-vg="f" role="radio" aria-checked="false">여자</button></div></div>
+      <div class="vrow vtest"><div class="rt"><b>미리듣기 <em class="vn" id="v-num">1/5</em></b><span id="v-sent"></span><span id="v-now"></span></div><button type="button" class="vnext" id="v-next" aria-label="다음 문장"><svg viewBox="0 0 24 24" class="ic"><path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="pl" id="v-test" aria-label="미리듣기"><svg viewBox="0 0 24 24" class="ic"><path d="M8 5v14l11-7z"/></svg></button></div>
     </div>
     </div>
     <div class="pane" id="p-lang" role="tabpanel">
