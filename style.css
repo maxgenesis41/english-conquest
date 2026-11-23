@@ -674,17 +674,42 @@ button.sw { padding: 0; cursor: pointer; }
 /* ===== 영단어 직소 ===== */
 #game .cws { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 #game .cl { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; border: 2px solid transparent; border-radius: 10px; padding: 2px 8px; text-align: left; opacity: .55; }
-#game .cl b { flex: none; font-size: 12px; background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; }
+#game .cl b { flex: none; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: #fff; background: #fff; border: 2px solid var(--ink); border-radius: 50%; }
+/* v0.96 방향 색: 가로(→) 보라 #7C4DFF, 세로(↓) 주황 #FF8F3A. 초록=정답·빨강=오답·노랑=지금 칸/겹침 의미는 그대로 */
+#game .cl.ca b, #game .sub .arrw.ca { background: #7C4DFF; }
+#game .cl.cd b, #game .sub .arrw.cd { background: #FF8F3A; }
+#game .cl.ca.on { background: #EEE8FF; border-color: #7C4DFF; }
+#game .cl.cd.on { background: #FFEBD9; border-color: #FF8F3A; }
+#game .sub .arrw { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 6px; vertical-align: middle; border: 2px solid var(--ink); border-radius: 50%; color: #fff; font-size: 14px; line-height: 1; }
 #game .cl.on { opacity: 1; background: #FFF1B8; border-color: var(--ink); }
+/* v0.93 직소 빈칸 문장 단서: 영어 문장(밑줄)+한글 번역 2줄. 클래스 이름을 .en 으로 쓰면 .q .en(40px·글자 단위 줄바꿈)과 겹치므로 .fe·.fk 를 쓴다 */
+#game .cl.fill { align-items: flex-start; padding: 4px 8px; }
+#game .cl.fill b { margin-top: 0; }
+#game .cl.fill .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; word-break: normal; overflow-wrap: break-word; }
+#game .cl.fill .fe { font-size: 18px; font-weight: 700; line-height: 1.25; color: var(--ink); }
+#game .cl.fill:not(.on) .fe { font-size: 14px; }
+#game .cl.fill.df.on .fe { font-size: 16px; line-height: 1.2; }   /* v0.97 영영 풀이: 풀이가 길어 한 단계 작게(칸 영역 확보) */
+#game .cl.fill .fe u { display: inline-block; min-width: 36px; border-bottom: 3px solid var(--ink); text-decoration: none; text-align: center; }
+#game .cl.ca.fill .fe u { border-bottom-color: #7C4DFF; }
+#game .cl.cd.fill .fe u { border-bottom-color: #FF8F3A; }
+#game .cl.fill .fe u.ok { min-width: 0; padding: 0 4px; border-radius: 6px; background: #D9F3D9; color: #1E7A1E; border-bottom-color: #1E7A1E; }
+#game .cl.fill .fk { font-size: 13px; font-weight: 600; color: #5A6A94; line-height: 1.3; }
 #game .cw { display: grid; justify-content: center; gap: 2px; margin: 6px auto 0; }
 #game .cw span { position: relative; display: grid; place-items: center; font-weight: 700; color: #24336B; border-radius: 6px; background: transparent; }
 #game .cw span.c { background: #fff; border: 2px solid #24336B; }
-#game .cw span.act { background: #FFF1B8; }
-#game .cw span.st { background: #D9F3D9; }
-#game .cw span.st b { position: absolute; top: 1px; left: 3px; font-size: 9px; line-height: 1; color: #2D7A2D; }
+/* v0.96 격자 칸 바탕: 가로 단어(wa) 연한 보라, 세로 단어(wd) 연한 주황, 겹치는 칸(wx) 반반. 푸는 중(act)은 한 단계 진하게. ok·bad·x 는 뒤에 있어 위에 덮인다 */
+#game .cw span.wa { background: #E4DAFF; }
+#game .cw span.wd { background: #FFE0C6; }
+#game .cw span.wx { background: linear-gradient(135deg, #E4DAFF 50%, #FFE0C6 50%); }
+#game .cw span.wa.act { background: #C7B3FF; border-color: #7C4DFF; }
+#game .cw span.wd.act { background: #FFC796; border-color: #FF8F3A; }
+#game .cw span.st b { position: absolute; top: 0; left: 1px; font-size: 10px; font-weight: 700; line-height: 1; }
+#game .cw span.wa.st b { color: #5B30D6; }
+#game .cw span.wd.st b { color: #D9661A; }
 #game .cw span.x { background: #FFC83A; }
 #game .cw span.ok { background: #D9F3D9; color: #1E7A1E; }
 #game .cw span.bad { background: #FFE0E3; color: #E0334C; }
+#game .cw span.ok.st b { color: #2D7A2D; }
 #game .opts.cw2 { gap: 8px; }
 #game .opts.cw2 .opt { height: 50px; font-size: 20px; padding: 0 4px; white-space: nowrap; }
 #game .opts.cw2.lt .opt { height: 58px; font-size: 30px; }

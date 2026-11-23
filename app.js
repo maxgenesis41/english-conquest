@@ -1184,7 +1184,7 @@
   }
   function startJig(lv) {
     clearTimer(); jigLeave();
-    var data = Jig.build({ lv: lv, band: Game.bandOf(lv), words: ALLW });
+    var data = Jig.build({ lv: lv, band: Game.bandOf(lv), words: ALLW, sents: typeof SENTENCES !== "undefined" ? SENTENCES : undefined, gram: typeof JIGGRAM !== "undefined" ? JIGGRAM : undefined, def: typeof JIGDEF !== "undefined" ? JIGDEF : undefined });   // v0.93: sents = 빈칸 문장 단서용, v0.95: gram = 문법 객관식
     if (!data) { showToast("퍼즐을 준비하지 못했어요"); return false; }
     lastStage = lv; lastMode = "jigsaw"; lastReview = false; cur = null; spell = null;
     jig = { lv: lv, d: data, pi: 0, si: 0, picked: null, correct: 0, full: 0, pOk: true, got: {} };
@@ -1203,12 +1203,37 @@
     $("g-foot").classList.remove("fb"); $("g-next").style.display = "none";
     card.textContent = ""; delete card.dataset.a; card.dataset.k = "";
     box.textContent = ""; box.className = "opts cw2" + (k === "x" ? " lt" : "");
-    card.appendChild(el("div", "sub", k === "a" ? "가로 ① 단어를 골라 주세요" : k === "d" ? "세로 ② 단어를 골라 주세요" : "겹치는 칸의 알파벳은?"));
+    var isFill = !!(p.fill && p.fill.k === k);   // v0.93: 이 단계의 단서가 빈칸 문장이면 안내 문구가 달라진다(v0.96 방향 색 표시: → 가로 보라, ↓ 세로 주황)
+    var sb = el("div", "sub");   // v0.96: "1번/2번" 대신 방향 색 원(→ 보라·↓ 주황)+문구
+    if (k === "a" || k === "d") sb.appendChild(el("span", "arrw " + (k === "a" ? "ca" : "cd"), k === "a" ? "\u2192" : "\u2193"));
+    sb.appendChild(document.createTextNode(k === "x" ? "겹치는 칸의 알파벳은?" : isFill ? (p.fill.df ? "뜻풀이에 맞는 단어를 골라 주세요" : "빈칸에 들어갈 단어를 골라 주세요") : "단어를 골라 주세요"));
+    card.appendChild(sb);
     jig.sub = card.firstChild;
     var cs = el("div", "cws");
-    function clue(n, lab, ko, on) { var e = el("div", "cl" + (on ? " on" : "")), b = el("b", "", lab); e.appendChild(b); e.appendChild(document.createTextNode(ko)); return e; }
-    cs.appendChild(clue(1, "가로 ①", p.a.ko, k === "a"));
-    cs.appendChild(clue(2, "세로 ②", p.d.ko, k === "d"));
+    function clue(n, lab, ko, on) { var e = el("div", "cl " + (n === 1 ? "ca" : "cd") + (on ? " on" : "")), b = el("b", "", lab); e.appendChild(b); e.appendChild(document.createTextNode(ko)); return e; }
+    // v0.93: 빈칸 문장 단서 — 지금 푸는 단계는 영어 문장(밑줄)+한글 번역 2줄, 아직 안 푼 단계는 "빈칸 문장", 푼 단계는 완성된 문장
+    function fillClue(key, lab, on) {
+      var f = p.fill, e = el("div", "cl fill " + (f.df ? "df " : "") + (key === "a" ? "ca" : "cd") + (on ? " on" : "")), tx = el("div", "tx"), fe = el("div", "fe"), parts = f.en.split("____"), u = el("u", "");
+      e.appendChild(el("b", "", lab));
+      if (!on && !jig.got[key]) { tx.appendChild(el("div", "fe", f.df ? "영영 풀이" : "빈칸 문장")); e.appendChild(tx); return e; }
+      if (f.df) {   // v0.97: 영영 풀이 — 풀기 전엔 영어 풀이(+한글 번역), 푼 뒤엔 정답 단어 + 풀이
+        if (jig.got[key]) { u.className = "ok"; u.textContent = p[key].en.toUpperCase(); fe.appendChild(u); fe.appendChild(document.createTextNode(" = " + f.en)); }
+        else fe.appendChild(document.createTextNode(f.en));
+        tx.appendChild(fe);
+        if (on) tx.appendChild(el("div", "fk", f.ko));
+        e.appendChild(tx);
+        return e;
+      }
+      fe.appendChild(document.createTextNode(parts[0]));
+      if (jig.got[key]) { u.className = "ok"; u.textContent = p[key].en.toUpperCase(); }
+      fe.appendChild(u); fe.appendChild(document.createTextNode(parts[1] || ""));
+      tx.appendChild(fe);
+      if (on) tx.appendChild(el("div", "fk", f.ko));
+      e.appendChild(tx);
+      return e;
+    }
+    cs.appendChild(p.fill && p.fill.k === "a" ? fillClue("a", "\u2192", k === "a") : clue(1, "\u2192", p.a.ko, k === "a"));
+    cs.appendChild(p.fill && p.fill.k === "d" ? fillClue("d", "\u2193", k === "d") : clue(2, "\u2193", p.d.ko, k === "d"));
     card.appendChild(cs);
     var grid = el("div", "cw"); card.appendChild(grid); jig.grid = grid;
     jigGrid(false);
@@ -1232,12 +1257,13 @@
       if (isX) ch = (got.a || got.d || (got.x && reveal)) ? p.ch : "";
       else if (inA) ch = (x === 0 || got.a) ? p.a.en.charAt(x) : "";
       else ch = (y === 0 || got.d) ? p.d.en.charAt(y) : "";
-      if (inA && x === 0) { cls = "c st"; c.appendChild(el("b", "", "1")); }
-      else if (inD && y === 0) { cls = "c st"; c.appendChild(el("b", "", "2")); }
+      // v0.96: 시작 칸 표시는 번호 대신 방향 화살표(→ 가로, ↓ 세로). 칸 바탕은 단어 방향 색(wa·wd·wx)이고, 푸는 중(act)·공개(ok·bad)는 그 위에 겹친다
+      if (inA && x === 0) { cls = "c st" + (reveal && cur === "a" ? (wrongKind === "bad" ? " bad" : " ok") : !reveal && cur === "a" ? " act" : ""); c.appendChild(el("b", "", "\u2192")); }
+      else if (inD && y === 0) { cls = "c st" + (reveal && cur === "d" ? (wrongKind === "bad" ? " bad" : " ok") : !reveal && cur === "d" ? " act" : ""); c.appendChild(el("b", "", "\u2193")); }
       else if (isX && cur === "x" && !reveal) { cls = "c x"; ch = "?"; }
       else if (reveal && ((cur === "a" && inA) || (cur === "d" && inD) || (cur === "x" && isX))) cls = "c " + (wrongKind === "bad" ? "bad" : "ok");
       else if (!reveal && ((cur === "a" && inA) || (cur === "d" && inD))) cls = "c act";
-      c.className = cls;
+      c.className = cls + (isX ? " wx" : inA ? " wa" : " wd");
       c.appendChild(document.createTextNode(ch.toUpperCase()));
       g.appendChild(c);
     }
@@ -1262,6 +1288,8 @@
     for (k = 0; k < bs.length; k++) { bs[k].disabled = true; bs[k].classList.add(k === o.answer ? "right" : k === i ? "wrong" : "dim"); }
     if (ok) jig.correct++; else jig.pOk = false;
     jig.got[s.k] = true;
+    var fu = document.querySelector("#g-card .cl.fill.on .fe u");   // v0.93: 빈칸 문장 단서면 정답 단어를 밑줄에 채운다(맞든 틀리든 정답 공개)
+    if (fu && s.k !== "x") { fu.className = "ok"; fu.textContent = s.p[s.k].en.toUpperCase(); }
     jigGrid(true, "ok");   // 공개된 단어는 정답이므로 맞든 틀리든 초록으로 보여 준다
     sfx(ok ? "correct" : "wrong");
     if (window.Chr) Chr.pop(ok ? "happy" : "sad", { ms: ok ? 1000 : 1800 });   // v0.72: 빈 공간이 모자라면 나오지 않는다
